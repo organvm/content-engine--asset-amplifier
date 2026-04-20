@@ -30,6 +30,7 @@
     "@fastify/multipart": "^9.4.0",
     "axios": "*",
     "fastify": "^5.8.4",
-    "hono": "4.12.9"
+    "hono": "4.12.9",
+    "stripe": "^22.0.0"
   }
 }

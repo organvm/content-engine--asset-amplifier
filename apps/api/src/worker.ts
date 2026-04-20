@@ -19,6 +19,11 @@ type Bindings = {
   OPENAI_API_KEY?: string; // allow-secret
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_API_TOKEN?: string; // allow-secret
+  STRIPE_SECRET_KEY?: string; // allow-secret
+  STRIPE_WEBHOOK_SECRET?: string; // allow-secret
+  STRIPE_PRICE_ID_CREATOR?: string;
+  STRIPE_PRICE_ID_STUDIO?: string;
+  DASHBOARD_URL?: string;
   [key: string]: unknown;
 };
 
@@ -301,6 +306,106 @@ app.put('/api/v1/settings/keys', async (c) => {
     message: 'In production, API keys are set as Cloudflare Worker secrets. Use: echo "your-key" | npx wrangler secret put KEY_NAME -c apps/api/wrangler.toml',
     available_keys: ['GROQ_API_KEY', 'GEMINI_API_KEY', 'CEREBRAS_API_KEY', 'ANTHROPIC_API_KEY', 'OPENAI_API_KEY'],
   });
+});
+
+// ── Billing ──────────────────────────────────────────────────
+app.get('/api/v1/billing/status', (c) => {
+  const env = process.env;
+  const hasKey = !!env.STRIPE_SECRET_KEY;
+  const hasWebhookSecret = !!env.STRIPE_WEBHOOK_SECRET;
+  const hasCreatorPrice = !!env.STRIPE_PRICE_ID_CREATOR;
+  const hasStudioPrice = !!env.STRIPE_PRICE_ID_STUDIO;
+  return c.json({
+    configured: hasKey && hasWebhookSecret && hasCreatorPrice && hasStudioPrice,
+    stripe_key: hasKey,
+    webhook_secret: hasWebhookSecret,
+    price_creator: hasCreatorPrice,
+    price_studio: hasStudioPrice,
+  });
+});
+
+app.post('/api/v1/billing/checkout', async (c) => {
+  const { default: Stripe } = await import('stripe');
+  const body = await c.req.json();
+  const tier = body.tier;
+  const email = body.email;
+
+  const validTiers = ['creator', 'studio'];
+  if (!validTiers.includes(tier)) {
+    return c.json({ error: `Invalid tier. Must be one of: ${validTiers.join(', ')}` }, 400);
+  }
+
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return c.json({ error: 'STRIPE_SECRET_KEY not configured' }, 500);
+
+  const stripe = new Stripe(key);
+  const priceMap: Record<string, string | undefined> = {
+    creator: process.env.STRIPE_PRICE_ID_CREATOR,
+    studio: process.env.STRIPE_PRICE_ID_STUDIO,
+  };
+  const priceId = priceMap[tier];
+  if (!priceId) return c.json({ error: `Price ID not configured for tier: ${tier}` }, 500);
+
+  const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:5173';
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [{ price: priceId, quantity: 1 }],
+    ...(email && { customer_email: email }),
+    success_url: `${dashboardUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${dashboardUrl}/billing/cancel`,
+    metadata: { tier },
+  });
+
+  return c.json({ sessionId: session.id, url: session.url });
+});
+
+app.get('/api/v1/billing/session/:sessionId', async (c) => {
+  const { default: Stripe } = await import('stripe');
+  const sessionId = c.req.param('sessionId');
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return c.json({ error: 'STRIPE_SECRET_KEY not configured' }, 500);
+
+  const stripe = new Stripe(key);
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['subscription', 'customer'],
+  });
+
+  return c.json({
+    id: session.id,
+    status: session.status,
+    customerEmail: session.customer_details?.email,
+    tier: session.metadata?.tier,
+    subscriptionId: typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id,
+  });
+});
+
+app.post('/api/v1/billing/webhook', async (c) => {
+  const { default: Stripe } = await import('stripe');
+  const key = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!key || !webhookSecret) return c.json({ error: 'Stripe not configured' }, 500);
+
+  const stripe = new Stripe(key);
+  const signature = c.req.header('stripe-signature');
+  if (!signature) return c.json({ error: 'Missing stripe-signature header' }, 400);
+
+  const rawBody = await c.req.text();
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  } catch (err: any) {
+    return c.json({ error: `Webhook verification failed: ${err.message}` }, 400);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    console.log('Checkout completed:', { tier: session.metadata?.tier, email: session.customer_details?.email });
+  }
+
+  return c.json({ received: true });
 });
 
 export default app;

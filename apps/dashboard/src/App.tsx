@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard.js';
 import Assets from './pages/Assets.js';
 import Calendar from './pages/Calendar.js';
 import Identity from './pages/Identity.js';
+import Pricing from './pages/Pricing.js';
+import CheckoutSuccess from './pages/CheckoutSuccess.js';
+import CheckoutCancel from './pages/CheckoutCancel.js';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'home' },
@@ -349,6 +352,9 @@ export default function App() {
         <Route path="/review" element={<ReviewQueue />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/identity" element={<Identity />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/billing/success" element={<CheckoutSuccess />} />
+        <Route path="/billing/cancel" element={<CheckoutCancel />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
