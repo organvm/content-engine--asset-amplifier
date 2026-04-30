@@ -27,20 +27,20 @@ Premium brands pay $15-50K for hero films and product renders. These assets get 
 
 ## Architecture (pnpm monorepo)
 
-- **apps/**: Next.js dashboard, Fastify API, Management CLI.
+- **apps/**: React dashboard, dual-runtime API (Cloudflare Worker + Fastify), Management CLI.
 - **services/**: Specialized microservices for ingestion, extraction, and generation.
 - **packages/**: Shared logic for Database (Drizzle), Domain, Storage (R2), Queues (BullMQ/Temporal).
 - **infra/**: Dockerized Redis/Postgres, Temporal configuration.
 
 ## Stack
 
-- **Frontend:** Next.js 15, React 19, Tailwind, Lucide.
-- **Backend:** Node.js/TypeScript (Fastify).
+- **Frontend:** React 19 + Vite 8 + Tailwind 3 + Lucide.
+- **Backend:** Node.js/TypeScript — dual-runtime API: Hono on Cloudflare Worker (production) + Fastify locally (full pipeline). See `CLAUDE.md` → Architecture: Dual-Runtime API.
 - **Database:** PostgreSQL (Neon) via Drizzle ORM.
 - **Workflow:** Temporal.io for retriable processing pipelines.
 - **Queue:** BullMQ + Redis.
 - **AI/ML:** FFmpeg, PySceneDetect, Whisper/Deepgram, Claude API.
-- **Deploy:** Vercel (frontend) + Railway/Render (services).
+- **Deploy:** Cloudflare Pages (dashboard) + Cloudflare Worker (API).
 
 ## Quick Start
 

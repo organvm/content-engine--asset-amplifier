@@ -7,8 +7,8 @@ org: organvm-iii-ergon
 metadata:
   implementation_status: ACTIVE
   tier: standard
-  promotion_status: LOCAL
-  last_validated: "2026-03-26"
+  promotion_status: CANDIDATE
+  last_validated: "2026-04-30"
   generated: "2026-03-23"
   sprint: 1
 
