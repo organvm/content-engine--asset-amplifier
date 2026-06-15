@@ -27,10 +27,10 @@
     "@cronus/scheduler": "workspace:*",
     "@cronus/storage": "workspace:*",
     "@fastify/cors": "^11.2.0",
-    "@fastify/multipart": "^9.4.0",
+    "@fastify/multipart": "^10.0.0",
     "axios": "*",
-    "fastify": "^5.8.4",
-    "hono": "4.12.9",
+    "fastify": "^5.8.5",
+    "hono": "4.12.25",
     "stripe": "^22.0.0"
   }
 }
