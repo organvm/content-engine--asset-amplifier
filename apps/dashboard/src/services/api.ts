@@ -24,6 +24,8 @@ export const assetService = {
 export const contentService = {
   list: (brandId: string, filters?: { approval_status?: string; platform?: string }) => 
     api.get<ContentUnit[]>(`/brands/${brandId}/content`, { params: filters }).then(r => r.data),
+  get: (brandId: string, id: string) =>
+    api.get<ContentUnit>(`/brands/${brandId}/content/${id}`).then(r => r.data),
   approve: (brandId: string, id: string) => api.post(`/brands/${brandId}/content/${id}/approve`),
   reject: (brandId: string, id: string, reason?: string) => 
     api.post(`/brands/${brandId}/content/${id}/reject`, { reason }),

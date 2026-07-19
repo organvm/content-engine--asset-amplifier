@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ReviewQueue from './pages/ReviewQueue.js';
 import DesignResize from './pages/DesignResize.js';
+import ContentDetail from './pages/ContentDetail.js';
 import Settings from './pages/Settings.js';
 import Dashboard from './pages/Dashboard.js';
 import Assets from './pages/Assets.js';
@@ -370,6 +371,7 @@ export default function App() {
         <Route path="/roi" element={<AssetRoiPage />} />
         <Route path="/resize" element={<DesignResize />} />
         <Route path="/review" element={<ReviewQueue />} />
+        <Route path="/content/:id" element={<ContentDetail />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/identity" element={<Identity />} />
         <Route path="/pricing" element={<Pricing />} />
