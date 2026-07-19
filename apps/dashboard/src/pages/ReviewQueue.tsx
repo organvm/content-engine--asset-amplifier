@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { contentService, brandService } from '../services/api.js';
+import { contentService } from '../services/api.js';
+import { useBrand } from '../services/BrandContext.js';
 import { ContentUnit } from '@cronus/domain';
 import { Link } from 'react-router-dom';
 
@@ -8,9 +9,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.work
 type Toast = { id: number; message: string; type: 'success' | 'error' };
 
 export default function ReviewQueue() {
+  const { brandId } = useBrand();
   const [units, setUnits] = useState<ContentUnit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [brandId, setBrandId] = useState<string | null>(null);
   const [actionInFlight, setActionInFlight] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
@@ -19,14 +20,6 @@ export default function ReviewQueue() {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 2500);
-  }, []);
-
-  // Fetch first brand on mount
-  useEffect(() => {
-    brandService.list().then(brands => {
-      if (brands.length > 0) setBrandId(brands[0].id);
-      else setLoading(false);
-    }).catch(() => setLoading(false));
   }, []);
 
   const fetchContent = useCallback(async () => {
@@ -181,13 +174,14 @@ export default function ReviewQueue() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filtered.map(unit => (
-            <ContentCard
-              key={unit.id}
-              unit={unit}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              disabled={actionInFlight === unit.id}
-            />
+            <Link key={unit.id} to={`/content/${unit.id}`} className="block">
+              <ContentCard
+                unit={unit}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                disabled={actionInFlight === unit.id}
+              />
+            </Link>
           ))}
         </div>
       )}

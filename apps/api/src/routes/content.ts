@@ -71,6 +71,24 @@ export const contentRoutes: FastifyPluginAsync = async (app) => {
     return mapRows(rows);
   });
 
+  // GET /brands/:brandId/content/:contentUnitId
+  // Get a single content unit by ID
+  app.get('/brands/:brandId/content/:contentUnitId', async (request, reply) => {
+    const { brandId, contentUnitId } = request.params as { brandId: string; contentUnitId: string };
+    const db = getDb();
+
+    const [row] = await db
+      .select()
+      .from(schema.contentUnits)
+      .where(and(
+        eq(schema.contentUnits.id, contentUnitId),
+        eq(schema.contentUnits.brand_id, brandId),
+      ));
+
+    if (!row) return reply.status(404).send({ error: 'Content unit not found' });
+    return mapRows([row])[0];
+  });
+
   // POST /brands/:brandId/content/:contentUnitId/approve
   app.post('/brands/:brandId/content/:contentUnitId/approve', async (request, _reply) => {
     const { contentUnitId } = request.params as { contentUnitId: string };
