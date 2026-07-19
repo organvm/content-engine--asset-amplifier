@@ -7,6 +7,10 @@ export { contentUnits } from './content-units.js';
 export { platformConnections } from './platform-connections.js';
 export { publishEvents } from './publish-events.js';
 export { performanceObservations } from './performance-observations.js';
+export { artworkProjects } from './artwork-projects.js';
+export { linkedApplications } from './linked-applications.js';
+export { publicationVariants } from './publication-variants.js';
+export { conversionEvents } from './conversion-events.js';
 
 import { agencies } from './agencies.js';
 import { brands } from './brands.js';
@@ -17,6 +21,10 @@ import { contentUnits } from './content-units.js';
 import { platformConnections } from './platform-connections.js';
 import { publishEvents } from './publish-events.js';
 import { performanceObservations } from './performance-observations.js';
+import { artworkProjects } from './artwork-projects.js';
+import { linkedApplications } from './linked-applications.js';
+import { publicationVariants } from './publication-variants.js';
+import { conversionEvents } from './conversion-events.js';
 
 export const schema = {
   agencies,
@@ -28,4 +36,8 @@ export const schema = {
   platformConnections,
   publishEvents,
   performanceObservations,
+  artworkProjects,
+  linkedApplications,
+  publicationVariants,
+  conversionEvents,
 };
