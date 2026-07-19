@@ -30,6 +30,7 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     brandService.list()
       .then(data => {
         setBrands(data);
+        // Restore persisted selection or default to first
         const persisted = localStorage.getItem('cronus_brand_id');
         const match = persisted && data.some(b => b.id === persisted);
         setSelectedBrandId(match ? persisted : data[0]?.id ?? null);
