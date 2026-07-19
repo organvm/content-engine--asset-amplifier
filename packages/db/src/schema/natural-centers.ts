@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, real, integer, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, real, integer, jsonb, vector } from 'drizzle-orm/pg-core';
 import { brands } from './brands.js';
 
 export const naturalCenters = pgTable('natural_centers', {
@@ -11,7 +11,7 @@ export const naturalCenters = pgTable('natural_centers', {
   narrative_bias: jsonb('narrative_bias').notNull(),
   symbolic_markers: jsonb('symbolic_markers').notNull(),
   negative_space: jsonb('negative_space').notNull(),
-  brand_embedding: text('brand_embedding').notNull(),
+  brand_embedding: vector('brand_embedding', { dimensions: 1536 }).notNull(),
   confidence_scores: jsonb('confidence_scores').notNull(),
   overall_confidence: real('overall_confidence').notNull(),
   source_asset_ids: jsonb('source_asset_ids').notNull(),
