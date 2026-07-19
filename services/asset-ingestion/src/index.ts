@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createStorage } from '@cronus/storage';
 import { getDb, schema } from '@cronus/db';
 import { createQueue } from '@cronus/queue';
-import { MediaType, ProcessingStatus, JobType } from '@cronus/domain';
+import { MediaType, ProcessingStatus } from '@cronus/domain';
 import { createLogger } from '@cronus/logger';
 
 const log = createLogger('asset-ingestion');

@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
@@ -15,5 +15,8 @@
     "@cronus/domain": "workspace:*",
     "@cronus/logger": "workspace:*",
     "bullmq": "^5.80.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

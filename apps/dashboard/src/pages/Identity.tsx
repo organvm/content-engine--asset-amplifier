@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { brandService, identityService } from '../services/api.js';
+import { NaturalCenter } from '@cronus/domain';
 
 export default function Identity() {
-  const [nc, setNc] = useState<any>(null);
+  const [nc, setNc] = useState<NaturalCenter | null>(null);
   const [loading, setLoading] = useState(true);
   const [deriving, setDeriving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +35,8 @@ export default function Identity() {
         } catch { setError('Derivation in progress — refresh in a moment.'); }
         setDeriving(false);
       }, 10000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError((err as Error).message);
       setDeriving(false);
     }
   };
@@ -115,7 +116,7 @@ export default function Identity() {
             )}
             {dim.type === 'pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.value) ? dim.value : []).map((item: string, i: number) => (
+                {(Array.isArray(dim.value) ? dim.value : []).map((item: string | Record<string, unknown>, i: number) => (
                   <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.value || (Array.isArray(dim.value) && dim.value.length === 0)) && (
@@ -125,7 +126,7 @@ export default function Identity() {
             )}
             {dim.type === 'negative-pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.value) ? dim.value : []).map((item: string, i: number) => (
+                {(Array.isArray(dim.value) ? dim.value : []).map((item: string | Record<string, unknown>, i: number) => (
                   <span key={i} className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.value || (Array.isArray(dim.value) && dim.value.length === 0)) && (

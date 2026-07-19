@@ -4,6 +4,7 @@
  */
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import type Stripe from 'stripe';
 import { getDb, schema, toCamel, mapRows, eq, desc } from '@cronus/db';
 import { resolveProviders } from '@cronus/config';
 
@@ -241,7 +242,7 @@ app.post('/api/v1/brands/:brandId/content/:unitId/reject', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const db = getDb();
   await db.update(schema.contentUnits)
-    .set({ approval_status: 'rejected', flagged_reason: (body as any).reason ?? 'Manual rejection' })
+    .set({ approval_status: 'rejected', flagged_reason: (body as { reason?: string }).reason ?? 'Manual rejection' })
     .where(eq(schema.contentUnits.id, c.req.param('unitId')));
   return c.json({ status: 'rejected' });
 });
@@ -396,8 +397,8 @@ app.post('/api/v1/billing/webhook', async (c) => {
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (err: any) {
-    return c.json({ error: `Webhook verification failed: ${err.message}` }, 400);
+  } catch (err) {
+    return c.json({ error: `Webhook verification failed: ${(err as Error).message}` }, 400);
   }
 
   if (event.type === 'checkout.session.completed') {

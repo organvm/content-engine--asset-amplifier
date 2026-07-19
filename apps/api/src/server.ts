@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import multipart from '@fastify/multipart';
 import { createLogger } from '@cronus/logger';
@@ -28,10 +28,11 @@ export async function buildApp() {
 
   // Error handler
   app.setErrorHandler((error, request, reply) => {
-    log.error({ err: error, url: request.url }, 'Request error');
-    reply.status(error.statusCode ?? 500).send({
-      error: error.message,
-      statusCode: error.statusCode ?? 500,
+    const err = error as FastifyError;
+    log.error({ err, url: request.url }, 'Request error');
+    reply.status(err.statusCode ?? 500).send({
+      error: err.message,
+      statusCode: err.statusCode ?? 500,
     });
   });
 

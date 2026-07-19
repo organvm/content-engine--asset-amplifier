@@ -53,8 +53,9 @@ export async function generateAssetContent(params: {
         log.debug({ fragmentId: fragment.id, platform }, 'Generating unit');
 
         // 2. AI Caption Generation
-        const systemPrompt = getBaseSystemPrompt({ 
-          brandName: brand.name, 
+        const systemPrompt = getBaseSystemPrompt({
+          brandName: brand.name,
+          platform,
           brandDescription: brand.description || undefined,
           toneDescription: brand.tone_description || undefined,
           systemPrompt: nc?.system_prompt || undefined

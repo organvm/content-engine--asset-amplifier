@@ -1,5 +1,4 @@
 import { createStorage } from '@cronus/storage';
-import { getDb, schema } from '@cronus/db';
 import { analyzeDesign } from './analyzer.js';
 import { resizeToFormat } from './resizer.js';
 import { getFormat, DESIGN_FORMATS } from './formats.js';

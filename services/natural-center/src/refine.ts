@@ -1,5 +1,6 @@
 import { getDb, schema } from '@cronus/db';
 import { eq, sql } from '@cronus/db';
+import { NaturalCenter } from '@cronus/domain';
 import { createLogger } from '@cronus/logger';
 import { compileSystemPrompt } from './prompt.js';
 
@@ -34,11 +35,13 @@ export async function refineNaturalCenter(params: {
 
   // 3. Recompile system prompt
   const newSystemPrompt = compileSystemPrompt({
-    ...updatedNc,
     brandName: brand.name,
-    thematicCore: updatedNc.thematic_core as any,
-    symbolicMarkers: updatedNc.symbolic_markers as any,
-    negativeSpace: updatedNc.negative_space as any,
+    thematicCore: updatedNc.thematic_core as NaturalCenter['thematicCore'],
+    aestheticSignature: updatedNc.aesthetic_signature as NaturalCenter['aestheticSignature'],
+    tonalVector: updatedNc.tonal_vector as NaturalCenter['tonalVector'],
+    narrativeBias: updatedNc.narrative_bias as NaturalCenter['narrativeBias'],
+    symbolicMarkers: updatedNc.symbolic_markers as NaturalCenter['symbolicMarkers'],
+    negativeSpace: updatedNc.negative_space as NaturalCenter['negativeSpace'],
   });
 
   // 4. Update Database

@@ -23,7 +23,7 @@ export const resizeRoutes: FastifyPluginAsync = async (app) => {
       } else {
         if (part.fieldname === 'target_formats') {
           // If it's a comma-separated string or multiple fields
-          const val = (part as any).value;
+          const val = (part as unknown as { value: string }).value;
           targetFormatIds = Array.isArray(val) ? val : val.split(',');
         }
       }

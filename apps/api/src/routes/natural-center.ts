@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { FastifyPluginAsync } from 'fastify';
-import { getDb, schema, toCamel, mapRows } from '@cronus/db';
+import { getDb, schema, toCamel } from '@cronus/db';
 import { eq } from '@cronus/db';
 import { deriveNaturalCenter, refineNaturalCenter } from '@cronus/natural-center';
 import { createLogger } from '@cronus/logger';
@@ -50,7 +50,7 @@ export const naturalCenterRoutes: FastifyPluginAsync = async (app) => {
 
   // PATCH /brands/:brandId/natural-center
   // Refines specific dimensions of the profile
-  app.patch('/brands/:brandId/natural-center', async (request, reply) => {
+  app.patch('/brands/:brandId/natural-center', async (request, _reply) => {
     const { brandId } = request.params as { brandId: string };
     const { adjustments } = request.body as { adjustments: Record<string, string> };
 
@@ -70,7 +70,7 @@ export const naturalCenterRoutes: FastifyPluginAsync = async (app) => {
     if (!nc) return reply.status(404).send({ error: 'NC not found' });
 
     // 2. Update inquiry status
-    const inquiries = (nc.inquiries as any[] || []).map(iq => {
+    const inquiries = ((nc.inquiries as Array<Record<string, unknown>>) || []).map(iq => {
       if (iq.id === inquiryId) {
         return { ...iq, status: 'answered', answer };
       }

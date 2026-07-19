@@ -44,9 +44,9 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
       });
 
       return reply.status(201).send(asset);
-    } catch (err: any) {
+    } catch (err) {
       log.error({ err, brandId }, 'Asset upload failed');
-      return reply.status(400).send({ error: err.message });
+      return reply.status(400).send({ error: (err as Error).message });
     }
   });
 

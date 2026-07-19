@@ -13,10 +13,10 @@ export const contentRoutes: FastifyPluginAsync = async (app) => {
   // Starts async content generation from an asset
   app.post('/brands/:brandId/generate', async (request, reply) => {
     const { brandId } = request.params as { brandId: string };
-    const { asset_id, platforms, posts_per_fragment } = request.body as { 
-      asset_id: string; 
-      platforms?: Platform[]; 
-      posts_per_fragment?: number 
+    const { asset_id, platforms } = request.body as {
+      asset_id: string;
+      platforms?: Platform[];
+      posts_per_fragment?: number
     };
 
     const db = getDb();
@@ -55,7 +55,6 @@ export const contentRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const db = getDb();
-    let query = db.select().from(schema.contentUnits).where(eq(schema.contentUnits.brand_id, brandId));
 
     // Apply filters if provided
     // Note: Drizzle query building for dynamic filters
@@ -73,7 +72,7 @@ export const contentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // POST /brands/:brandId/content/:contentUnitId/approve
-  app.post('/brands/:brandId/content/:contentUnitId/approve', async (request, reply) => {
+  app.post('/brands/:brandId/content/:contentUnitId/approve', async (request, _reply) => {
     const { contentUnitId } = request.params as { contentUnitId: string };
     const db = getDb();
 
@@ -85,7 +84,7 @@ export const contentRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // POST /brands/:brandId/content/:contentUnitId/reject
-  app.post('/brands/:brandId/content/:contentUnitId/reject', async (request, reply) => {
+  app.post('/brands/:brandId/content/:contentUnitId/reject', async (request, _reply) => {
     const { contentUnitId } = request.params as { contentUnitId: string };
     const { reason } = request.body as { reason?: string };
     const db = getDb();
