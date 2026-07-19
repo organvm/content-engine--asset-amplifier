@@ -42,8 +42,12 @@ export async function scoreContentUnits(contentUnitIds: string[]) {
     return;
   }
 
-  // Parse brand embedding from storage (stored as stringified JSON in text column)
-  const brandEmbedding: number[] = JSON.parse(nc.brand_embedding);
+  // Brand embedding is stored as pgvector; Drizzle returns number[] directly
+  const brandEmbedding: number[] = Array.isArray(nc.brand_embedding)
+    ? (nc.brand_embedding as number[])
+    : typeof nc.brand_embedding === 'string'
+      ? JSON.parse(nc.brand_embedding as string)
+      : [];
 
   log.info({ brandId, unitCount: units.length }, 'Scoring content batch');
 

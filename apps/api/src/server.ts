@@ -16,6 +16,7 @@ import { resizeRoutes } from './routes/resize.js';
 import { authPlugin } from './plugins/auth.js';
 import { settingsRoutes } from './routes/settings.js';
 import { billingRoutes } from './routes/billing.js';
+import { projectRoutes } from './routes/projects.js';
 
 const log = createLogger('api');
 
@@ -56,6 +57,7 @@ export async function buildApp() {
   await app.register(resizeRoutes, { prefix: '/api/v1' });
   await app.register(settingsRoutes, { prefix: '/api/v1' });
   await app.register(billingRoutes, { prefix: '/api/v1' });
+  await app.register(projectRoutes, { prefix: '/api/v1' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
