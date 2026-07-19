@@ -4,6 +4,7 @@ import ReviewQueue from './pages/ReviewQueue.js';
 import Settings from './pages/Settings.js';
 import Dashboard from './pages/Dashboard.js';
 import Assets from './pages/Assets.js';
+import AssetRoiPage from './pages/AssetRoi.js';
 import Calendar from './pages/Calendar.js';
 import Identity from './pages/Identity.js';
 import Pricing from './pages/Pricing.js';
@@ -13,6 +14,7 @@ import CheckoutCancel from './pages/CheckoutCancel.js';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/assets', label: 'Assets', icon: 'assets' },
+  { path: '/roi', label: 'ROI', icon: 'roi' },
   { path: '/review', label: 'Review', icon: 'review' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
@@ -22,6 +24,7 @@ const allNavItems = [
   ...navItems.slice(0, 4),
   { path: '/identity', label: 'Brand Identity', icon: 'identity' },
   navItems[4],
+  navItems[5],
 ];
 
 /** SVG icons sized for 24x24 viewBox, touch-safe containers */
@@ -63,6 +66,12 @@ const NavIcon: React.FC<{ icon: string; className?: string }> = ({ icon, classNa
       return (
         <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
+        </svg>
+      );
+    case 'roi':
+      return (
+        <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
         </svg>
       );
     default:
@@ -349,6 +358,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/assets" element={<Assets />} />
+        <Route path="/roi" element={<AssetRoiPage />} />
         <Route path="/review" element={<ReviewQueue />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/identity" element={<Identity />} />

@@ -29,6 +29,7 @@ export const contentService = {
     api.post(`/brands/${brandId}/content/${id}/reject`, { reason }),
   generate: (brandId: string, assetId: string) => 
     api.post(`/brands/${brandId}/generate`, { asset_id: assetId }),
+  get: (brandId: string, id: string) => api.get<ContentUnit>(`/brands/${brandId}/content/${id}`).then(r => r.data),
 };
 
 export const identityService = {
@@ -37,4 +38,22 @@ export const identityService = {
     api.post(`/brands/${brandId}/natural-center`, { asset_ids: assetIds }),
   answerInquiry: (brandId: string, inquiryId: string, answer: string) =>
     api.post(`/brands/${brandId}/natural-center/inquiries/${inquiryId}/answer`, { answer }),
+};
+
+export interface AssetRoi {
+  assetId: string;
+  assetName: string;
+  mediaType: string;
+  createdAt: string;
+  contentCount: number;
+  approvedCount: number;
+  platformCount: number;
+  totalViews: number;
+  totalEngagement: number;
+}
+
+export const analyticsService = {
+  getAssetRoi: (brandId: string) => api.get<AssetRoi[]>(`/brands/${brandId}/roi`).then(r => r.data),
+  getAssetAttribution: (brandId: string, assetId: string) =>
+    api.get(`/brands/${brandId}/assets/${assetId}/attribution`).then(r => r.data),
 };
