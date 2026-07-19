@@ -1,25 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { brandService, identityService } from '../services/api.js';
-import { NaturalCenter } from '@cronus/domain';
+import { identityService } from '../services/api.js';
+import { useBrand } from '../services/BrandContext.js';
 
 export default function Identity() {
-  const [nc, setNc] = useState<NaturalCenter | null>(null);
+  const { brandId } = useBrand();
+  const [nc, setNc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deriving, setDeriving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [brandId, setBrandId] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    brandService.list().then(brands => {
-      if (brands.length === 0) { setLoading(false); return; }
-      setBrandId(brands[0].id);
-      identityService.get(brands[0].id)
-        .then(setNc)
-        .catch(() => setNc(null))
-        .finally(() => setLoading(false));
-    }).catch(() => setLoading(false));
-  }, []);
+    if (!brandId) { setLoading(false); return; }
+    identityService.get(brandId)
+      .then(setNc)
+      .catch(() => setNc(null))
+      .finally(() => setLoading(false));
+  }, [brandId]);
 
   const handleDerive = async () => {
     if (!brandId) return;
@@ -35,8 +32,8 @@ export default function Identity() {
         } catch { setError('Derivation in progress — refresh in a moment.'); }
         setDeriving(false);
       }, 10000);
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err.message);
       setDeriving(false);
     }
   };
@@ -116,7 +113,7 @@ export default function Identity() {
             )}
             {dim.type === 'pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.value) ? dim.value : []).map((item: string | Record<string, unknown>, i: number) => (
+                {(Array.isArray(dim.value) ? dim.value : []).map((item: string, i: number) => (
                   <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.value || (Array.isArray(dim.value) && dim.value.length === 0)) && (
@@ -126,7 +123,7 @@ export default function Identity() {
             )}
             {dim.type === 'negative-pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.value) ? dim.value : []).map((item: string | Record<string, unknown>, i: number) => (
+                {(Array.isArray(dim.value) ? dim.value : []).map((item: string, i: number) => (
                   <span key={i} className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.value || (Array.isArray(dim.value) && dim.value.length === 0)) && (

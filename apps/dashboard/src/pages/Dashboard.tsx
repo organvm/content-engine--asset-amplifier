@@ -1,41 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { brandService, assetService, contentService } from '../services/api.js';
+import { assetService, contentService } from '../services/api.js';
+import { useBrand } from '../services/BrandContext.js';
 import { Link } from 'react-router-dom';
-import { Asset, Brand, ContentUnit } from '@cronus/domain';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
 
 export default function Dashboard() {
-  const [brand, setBrand] = useState<Brand | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [content, setContent] = useState<ContentUnit[]>([]);
+  const { selectedBrand, brandId } = useBrand();
+  const [assets, setAssets] = useState<any[]>([]);
+  const [content, setContent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    brandService.list().then(brands => {
-      if (brands.length === 0) { setLoading(false); return; }
-      const b = brands[0];
-      setBrand(b);
-      Promise.all([
-        assetService.list(b.id),
-        contentService.list(b.id),
-      ]).then(([a, c]) => {
-        setAssets(a);
-        setContent(c);
-      }).finally(() => setLoading(false));
-    }).catch(() => setLoading(false));
-  }, []);
+    if (!brandId) { setLoading(false); return; }
+    Promise.all([
+      assetService.list(brandId),
+      contentService.list(brandId),
+    ]).then(([a, c]) => {
+      setAssets(a);
+      setContent(c);
+    }).finally(() => setLoading(false));
+  }, [brandId]);
 
   if (loading) return <div className="animate-pulse text-gray-400 p-4">Loading dashboard...</div>;
 
-  const pending = content.filter((u) => u.approvalStatus === 'pending');
-  const approved = content.filter((u) => u.approvalStatus === 'approved');
-  const platforms = [...new Set(content.map((u) => u.platform))];
+  const pending = content.filter((u: any) => u.approvalStatus === 'pending');
+  const approved = content.filter((u: any) => u.approvalStatus === 'approved');
+  const platforms = [...new Set(content.map((u: any) => u.platform))];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900">{brand?.name || 'Brand'} Overview</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900">{selectedBrand?.name || 'Brand'} Overview</h2>
         <p className="text-sm text-gray-500 mt-1">Content yield engine dashboard</p>
       </div>
 
@@ -65,7 +61,7 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Content by Platform</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {platforms.map(platform => {
-              const count = content.filter((u) => u.platform === platform).length;
+              const count = content.filter((u: any) => u.platform === platform).length;
               return (
                 <div key={platform} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700 capitalize">{platform.replace('_', ' ')}</span>
@@ -85,7 +81,7 @@ export default function Dashboard() {
             <Link to="/review" className="text-sm text-blue-600 font-medium">View All →</Link>
           </div>
           <div className="space-y-3">
-            {content.slice(0, 5).map((unit) => (
+            {content.slice(0, 5).map((unit: any) => (
               <div key={unit.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 {unit.mediaKey && (
                   <img

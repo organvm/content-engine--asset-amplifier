@@ -1,12 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrandProvider, useBrand } from './services/BrandContext.js';
 import ReviewQueue from './pages/ReviewQueue.js';
-import DesignResize from './pages/DesignResize.js';
-import ContentDetail from './pages/ContentDetail.js';
 import Settings from './pages/Settings.js';
 import Dashboard from './pages/Dashboard.js';
 import Assets from './pages/Assets.js';
-import AssetRoiPage from './pages/AssetRoi.js';
 import Calendar from './pages/Calendar.js';
 import Identity from './pages/Identity.js';
 import Pricing from './pages/Pricing.js';
@@ -16,10 +14,8 @@ import CheckoutCancel from './pages/CheckoutCancel.js';
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/assets', label: 'Assets', icon: 'assets' },
-  { path: '/roi', label: 'ROI', icon: 'roi' },
   { path: '/review', label: 'Review', icon: 'review' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
-  { path: '/resize', label: 'Resize', icon: 'resize' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -27,8 +23,6 @@ const allNavItems = [
   ...navItems.slice(0, 4),
   { path: '/identity', label: 'Brand Identity', icon: 'identity' },
   navItems[4],
-  navItems[5],
-  navItems[6],
 ];
 
 /** SVG icons sized for 24x24 viewBox, touch-safe containers */
@@ -72,24 +66,11 @@ const NavIcon: React.FC<{ icon: string; className?: string }> = ({ icon, classNa
           <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" />
         </svg>
       );
-    case 'roi':
-      return (
-        <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-        </svg>
-      );
-    case 'resize':
-      return (
-        <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-        </svg>
-      );
     default:
       return null;
   }
 };
 
-const BRAND_ID = '03fd240d-93d3-4f3c-b28a-b1e6b6e5570f'; // TODO: dynamic from brand selector
 const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
 
 type UploadPhase = 'idle' | 'uploading' | 'generating';
@@ -97,6 +78,7 @@ type UploadPhase = 'idle' | 'uploading' | 'generating';
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { brands, selectedBrand, brandId, loading: brandLoading, selectBrand } = useBrand();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase>('idle');
@@ -110,7 +92,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !brandId) return;
 
     setUploadPhase('uploading');
     try {
@@ -118,7 +100,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       form.append('file', file);
 
       setUploadPhase('generating');
-      const res = await fetch(`${API_URL}/api/v1/brands/${BRAND_ID}/assets`, {
+      const res = await fetch(`${API_URL}/api/v1/brands/${brandId}/assets`, {
         method: 'POST',
         body: form,
       });
@@ -135,8 +117,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       // Brief delay so the user reads the toast before navigation
       setTimeout(() => navigate('/review'), 1200);
-    } catch (err) {
-      showToast(`Upload failed: ${(err as Error).message}`, 'error');
+    } catch (err: any) {
+      showToast(`Upload failed: ${err.message}`, 'error');
     } finally {
       setUploadPhase('idle');
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -279,9 +261,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           {/* Desktop: brand selector */}
           <div className="hidden md:flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-500">Brand:</span>
-            <select className="text-sm border-none bg-transparent font-semibold focus:ring-0 cursor-pointer">
-              <option>Lefler Design</option>
-            </select>
+            {brandLoading ? (
+              <span className="text-sm text-gray-400">Loading...</span>
+            ) : brands.length === 0 ? (
+              <span className="text-sm text-gray-400">No brands</span>
+            ) : (
+              <select
+                value={brandId ?? ''}
+                onChange={e => selectBrand(e.target.value)}
+                className="text-sm border-none bg-transparent font-semibold focus:ring-0 cursor-pointer"
+              >
+                {brands.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -364,21 +358,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 export default function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/assets" element={<Assets />} />
-        <Route path="/roi" element={<AssetRoiPage />} />
-        <Route path="/resize" element={<DesignResize />} />
-        <Route path="/review" element={<ReviewQueue />} />
-        <Route path="/content/:id" element={<ContentDetail />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/identity" element={<Identity />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/billing/success" element={<CheckoutSuccess />} />
-        <Route path="/billing/cancel" element={<CheckoutCancel />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
-    </Layout>
+    <BrandProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/assets" element={<Assets />} />
+          <Route path="/review" element={<ReviewQueue />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/identity" element={<Identity />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/billing/success" element={<CheckoutSuccess />} />
+          <Route path="/billing/cancel" element={<CheckoutCancel />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Layout>
+    </BrandProvider>
   );
 }
