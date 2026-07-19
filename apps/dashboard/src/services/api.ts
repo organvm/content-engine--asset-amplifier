@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Brand, Asset, ContentUnit, NaturalCenter } from '@cronus/domain';
 
-export type { Asset };
+export type { Asset, Brand };
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
 
@@ -193,4 +193,24 @@ export const conversionEventService = {
   }) => api.post<ConversionEvent>(`/brands/${brandId}/projects/${projectId}/events`, data).then(r => r.data),
   funnel: (brandId: string, projectId: string) =>
     api.get<FunnelBucket[]>(`/brands/${brandId}/projects/${projectId}/funnel`).then(r => r.data),
+};
+
+// --- Agencies ---
+
+export interface Agency {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl?: string;
+  primaryColor?: string;
+  contactEmail: string;
+  createdAt: string;
+}
+
+export const agencyService = {
+  list: () => api.get<Agency[]>('/agencies').then(r => r.data),
+  get: (id: string) => api.get<Agency>(`/agencies/${id}`).then(r => r.data),
+  create: (data: { name: string; contactEmail: string; logoUrl?: string; primaryColor?: string }) =>
+    api.post<Agency>('/agencies', data).then(r => r.data),
+  listBrands: (id: string) => api.get<Brand[]>(`/agencies/${id}/brands`).then(r => r.data),
 };

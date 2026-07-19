@@ -8,6 +8,12 @@ function slugify(name: string): string {
 }
 
 export const agencyRoutes: FastifyPluginAsync = async (app) => {
+  // GET /agencies — list all agencies
+  app.get('/agencies', async () => {
+    const db = getDb();
+    return mapRows(await db.select().from(schema.agencies));
+  });
+
   app.post('/agencies', async (request, reply) => {
     const body = request.body as { name: string; contact_email: string; logo_url?: string; primary_color?: string };
     const db = getDb();
