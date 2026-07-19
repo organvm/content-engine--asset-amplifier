@@ -26,11 +26,11 @@
     "@cronus/queue": "workspace:*",
     "@cronus/scheduler": "workspace:*",
     "@cronus/storage": "workspace:*",
-    "@fastify/cors": "^11.2.0",
-    "@fastify/multipart": "^10.0.0",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/multipart": "^10.1.0",
     "axios": "*",
-    "fastify": "^5.8.5",
-    "hono": "4.12.26",
-    "stripe": "^22.2.2"
+    "fastify": "^5.10.0",
+    "hono": "4.12.29",
+    "stripe": "^22.3.1"
   }
 }
