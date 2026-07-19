@@ -284,3 +284,204 @@ export type CreateAsset = Pick<
   "brandId" | "mediaType" | "originalFilename" | "storageKey" | "fileSizeBytes"
 > &
   Partial<Pick<Asset, "durationSeconds" | "width" | "height">>;
+
+// ---------------------------------------------------------------------------
+// Surface Composer — domain types (issue #35 Phase 0)
+// ---------------------------------------------------------------------------
+
+export const ProjectStatus = {
+  draft: "draft",
+  composing: "composing",
+  ready: "ready",
+  launched: "launched",
+  archived: "archived",
+} as const satisfies Record<string, string>;
+export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus];
+
+export const ProjectType = {
+  artwork: "artwork",
+  instrument: "instrument",
+  performance: "performance",
+  series: "series",
+  publication: "publication",
+} as const satisfies Record<string, string>;
+export type ProjectType = (typeof ProjectType)[keyof typeof ProjectType];
+
+export const PublicationFormat = {
+  single: "single",
+  carousel: "carousel",
+  reel: "reel",
+  story: "story",
+  thread: "thread",
+  article: "article",
+} as const satisfies Record<string, string>;
+export type PublicationFormat =
+  (typeof PublicationFormat)[keyof typeof PublicationFormat];
+
+export const EditorialRole = {
+  seed: "seed",
+  story: "story",
+  influence: "influence",
+  process: "process",
+  instrument: "instrument",
+  participant: "participant",
+} as const satisfies Record<string, string>;
+export type EditorialRole =
+  (typeof EditorialRole)[keyof typeof EditorialRole];
+
+export const LinkedAppType = {
+  interactive: "interactive",
+  generator: "generator",
+  download: "download",
+  stream: "stream",
+  archive: "archive",
+  other: "other",
+} as const satisfies Record<string, string>;
+export type LinkedAppType = (typeof LinkedAppType)[keyof typeof LinkedAppType];
+
+export const LinkedAppHealth = {
+  unknown: "unknown",
+  healthy: "healthy",
+  degraded: "degraded",
+  offline: "offline",
+} as const satisfies Record<string, string>;
+export type LinkedAppHealth =
+  (typeof LinkedAppHealth)[keyof typeof LinkedAppHealth];
+
+export const LinkedAppPrivacy = {
+  public: "public",
+  unlisted: "unlisted",
+  private: "private",
+} as const satisfies Record<string, string>;
+export type LinkedAppPrivacy =
+  (typeof LinkedAppPrivacy)[keyof typeof LinkedAppPrivacy];
+
+export const ConversionEventType = {
+  project_view: "project_view",
+  essay_open: "essay_open",
+  application_open: "application_open",
+  application_start: "application_start",
+  application_complete: "application_complete",
+  download: "download",
+  share: "share",
+  relay_invite: "relay_invite",
+  relay_complete: "relay_complete",
+  follow_intent: "follow_intent",
+} as const satisfies Record<string, string>;
+export type ConversionEventType =
+  (typeof ConversionEventType)[keyof typeof ConversionEventType];
+
+export interface ProjectInfluence {
+  title: string;
+  artist?: string;
+  url?: string;
+  verified: boolean;
+}
+
+export interface ProjectCredit {
+  role: string;
+  name: string;
+  url?: string;
+}
+
+export interface ArtworkProject {
+  id: string;
+  brandId: string;
+  slug: string;
+  title: string;
+  subtitle?: string;
+  status: ProjectStatus;
+  projectType: ProjectType;
+  heroAssetId?: string;
+  sourceAssetIds: string[];
+  canonicalUrl?: string;
+  linkedApplicationId?: string;
+  hashtagTitle: string[];
+  keywords: string[];
+  influences: ProjectInfluence[];
+  canonicalEssay?: string;
+  artistStatement?: string;
+  processNote?: string;
+  credits: ProjectCredit[];
+  rights?: string;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LinkedApplication {
+  id: string;
+  projectId: string;
+  url: string;
+  type: LinkedAppType;
+  ctaLabel: string;
+  healthStatus: LinkedAppHealth;
+  privacy: LinkedAppPrivacy;
+  tracking: {
+    enabled: boolean;
+    campaignKey?: string;
+    allowedEvents: ConversionEventType[];
+  };
+}
+
+export interface PublicationVariant {
+  id: string;
+  projectId: string;
+  contentUnitId?: string;
+  platform: Platform;
+  format: PublicationFormat;
+  editorialRole: EditorialRole;
+  caption: string;
+  altText?: string;
+  headline?: string;
+  ctaLabel?: string;
+  destinationUrl?: string;
+  assetIds: string[];
+  approvalStatus: ApprovalStatus;
+  sortOrder: number;
+}
+
+export interface ConversionEvent {
+  id: string;
+  projectId: string;
+  publishEventId?: string;
+  anonymousSessionId: string;
+  eventType: ConversionEventType;
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  metadata: Record<string, unknown>;
+  occurredAt: Date;
+}
+
+export type CreateArtworkProject = Pick<
+  ArtworkProject,
+  "brandId" | "title" | "projectType"
+> &
+  Partial<
+    Pick<
+      ArtworkProject,
+      | "subtitle"
+      | "heroAssetId"
+      | "sourceAssetIds"
+      | "hashtagTitle"
+      | "keywords"
+      | "influences"
+      | "canonicalEssay"
+      | "artistStatement"
+      | "processNote"
+      | "credits"
+      | "rights"
+    >
+  >;
+
+export type CreatePublicationVariant = Pick<
+  PublicationVariant,
+  "projectId" | "platform" | "format" | "editorialRole" | "caption" | "assetIds"
+> &
+  Partial<
+    Pick<
+      PublicationVariant,
+      "contentUnitId" | "altText" | "headline" | "ctaLabel" | "destinationUrl"
+    >
+  >;
