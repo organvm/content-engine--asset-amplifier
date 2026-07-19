@@ -6,19 +6,24 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "blockhash-core": "*",
     "@anthropic-ai/sdk": "*",
-    "sharp": "*",
-    "fluent-ffmpeg": "*",
-    "@cronus/domain": "workspace:*",
+    "@cronus/config": "workspace:^",
     "@cronus/db": "workspace:*",
+    "@cronus/domain": "workspace:*",
+    "@cronus/logger": "workspace:*",
     "@cronus/storage": "workspace:*",
-    "@cronus/logger": "workspace:*"
+    "blockhash-core": "*",
+    "fluent-ffmpeg": "*",
+    "sharp": "*"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/node": "^26.1.1"
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ReviewQueue from './pages/ReviewQueue.js';
 import Settings from './pages/Settings.js';
@@ -116,8 +116,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       // Brief delay so the user reads the toast before navigation
       setTimeout(() => navigate('/review'), 1200);
-    } catch (err: any) {
-      showToast(`Upload failed: ${err.message}`, 'error');
+    } catch (err) {
+      showToast(`Upload failed: ${(err as Error).message}`, 'error');
     } finally {
       setUploadPhase('idle');
       if (fileInputRef.current) fileInputRef.current.value = '';

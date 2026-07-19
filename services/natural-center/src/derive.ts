@@ -1,4 +1,4 @@
-import { getConfig, resolveProviders } from '@cronus/config';
+import { resolveProviders } from '@cronus/config';
 import { getDb, schema } from '@cronus/db';
 import { eq, inArray, and, sql } from '@cronus/db';
 import { createLogger } from '@cronus/logger';
@@ -24,7 +24,6 @@ export async function deriveNaturalCenter(params: {
   toneDescription?: string;
 }) {
   const { brandId, assetIds, toneDescription } = params;
-  const config = getConfig();
   const db = getDb();
   const { llm, embedding } = await resolveProviders();
 
@@ -36,7 +35,8 @@ export async function deriveNaturalCenter(params: {
 
   try {
     // 1. Collect inputs (keyframes and transcripts)
-    const keyframes = await db
+    // TODO: feed keyframes into vision analysis once the stub below is replaced
+    const _keyframes = await db
       .select()
       .from(schema.fragments)
       .where(
@@ -75,7 +75,7 @@ Return this exact JSON structure:
       const jsonMatch = synthesisText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON object found');
       profile = JSON.parse(jsonMatch[0]);
-    } catch (parseErr) {
+    } catch {
       log.warn({ brandId, response: synthesisText.slice(0, 200) }, 'AI response not valid JSON, using defaults');
       profile = {
         thematic_core: { primary: toneDescription || 'professional', secondary: 'modern' },
@@ -109,7 +109,7 @@ Return this exact JSON structure:
       aestheticSignature: profile.aesthetic_signature,
       tonalVector: profile.tonal_vector,
       confidenceScores,
-    } as any);
+    });
 
     // 7. Persistence
     const [nc] = await db.insert(schema.naturalCenters).values({

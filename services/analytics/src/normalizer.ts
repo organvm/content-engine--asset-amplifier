@@ -10,7 +10,7 @@ export function normalizeMetrics(params: {
   engagement: number;
   followers?: number;
 }): number {
-  const { platform, views, engagement, followers = 1000 } = params;
+  const { platform, views, engagement } = params;
 
   if (views === 0) return 0;
 
@@ -32,7 +32,7 @@ export function normalizeMetrics(params: {
   const multiplier = multipliers[platform] || 1.0;
   
   // Normalized score = ER * Multiplier * (Log of reach factor if available)
-  let score = er * multiplier;
+  const score = er * multiplier;
 
   // Clamp to 0-1 (though ER can technically be > 1, it's rare)
   return Math.min(Math.max(score, 0), 1);

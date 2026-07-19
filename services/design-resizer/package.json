@@ -6,17 +6,20 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "sharp": "*",
     "@anthropic-ai/sdk": "*",
-    "@cronus/domain": "workspace:*",
     "@cronus/db": "workspace:*",
+    "@cronus/domain": "workspace:*",
+    "@cronus/logger": "workspace:*",
     "@cronus/storage": "workspace:*",
-    "@cronus/logger": "workspace:*"
+    "sharp": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

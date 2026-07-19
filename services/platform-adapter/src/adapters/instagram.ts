@@ -13,7 +13,7 @@ export class InstagramAdapter implements PlatformAdapter {
     return true;
   }
 
-  async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
+  async publish(unit: ContentUnit, _connection: PlatformConnection): Promise<{
     platformPostId: string;
     platformPostUrl?: string;
   }> {
@@ -27,7 +27,7 @@ export class InstagramAdapter implements PlatformAdapter {
     };
   }
 
-  async fetchMetrics(platformPostId: string, connection: PlatformConnection): Promise<PostMetrics> {
+  async fetchMetrics(_platformPostId: string, _connection: PlatformConnection): Promise<PostMetrics> {
     // TODO: Fetch from Meta Insights API
     return {
       views: 100,
@@ -46,7 +46,7 @@ export class InstagramAdapter implements PlatformAdapter {
     };
   }
 
-  async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
+  async checkRateLimit(_connection: PlatformConnection): Promise<boolean> {
     return false;
   }
 }

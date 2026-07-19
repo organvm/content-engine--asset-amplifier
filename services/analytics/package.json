@@ -6,14 +6,18 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@cronus/domain": "workspace:*",
     "@cronus/db": "workspace:*",
-    "@cronus/logger": "workspace:*"
+    "@cronus/domain": "workspace:*",
+    "@cronus/logger": "workspace:*",
+    "@cronus/platform-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

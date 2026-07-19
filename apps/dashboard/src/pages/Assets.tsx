@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { brandService, assetService } from '../services/api.js';
+import { Asset } from '@cronus/domain';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
 
@@ -9,7 +10,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1048576).toFixed(1)} MB`;
 }
 
-function timeAgo(date: string): string {
+function timeAgo(date: string | Date): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'just now';
@@ -20,7 +21,7 @@ function timeAgo(date: string): string {
 }
 
 export default function Assets() {
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function Assets() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assets.map((asset: any) => (
+          {assets.map((asset) => (
             <div key={asset.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               {/* Preview */}
               <div className="aspect-video bg-gray-100 relative flex items-center justify-center">

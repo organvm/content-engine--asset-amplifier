@@ -6,16 +6,20 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "commander": "*",
-    "ora": "*",
-    "@cronus/domain": "workspace:*",
+    "@cronus/config": "workspace:*",
     "@cronus/db": "workspace:*",
-    "@cronus/config": "workspace:*"
+    "@cronus/domain": "workspace:*",
+    "axios": "^1.18.1",
+    "commander": "*",
+    "ora": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
   }
 }

@@ -1,6 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import Stripe from 'stripe';
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    /** Raw JSON payload captured by the billing content parser (webhook signature checks). */
+    rawBody?: string;
+  }
+}
+
 const TIERS = ['creator', 'studio'] as const;
 type Tier = (typeof TIERS)[number];
 
@@ -21,6 +28,19 @@ function getPriceId(tier: Tier): string {
 }
 
 export const billingRoutes: FastifyPluginAsync = async (app) => {
+  // Capture the raw JSON payload on every billing route so the Stripe webhook
+  // can verify signatures, while keeping normal JSON parsing behavior.
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    try {
+      const raw = body as string;
+      req.rawBody = raw;
+      done(null, raw.length ? JSON.parse(raw) : {});
+    } catch (err) {
+      (err as { statusCode?: number }).statusCode = 400;
+      done(err as Error);
+    }
+  });
+
   // GET /status — returns Stripe config state
   app.get('/billing/status', async (_request, reply) => {
     const hasKey = !!process.env.STRIPE_SECRET_KEY;
@@ -99,12 +119,12 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(
-        request.rawBody as string,
+        request.rawBody ?? '',
         signature,
         webhookSecret,
       );
-    } catch (err: any) {
-      return reply.status(400).send({ error: `Webhook signature verification failed: ${err.message}` });
+    } catch (err) {
+      return reply.status(400).send({ error: `Webhook signature verification failed: ${(err as Error).message}` });
     }
 
     switch (event.type) {

@@ -84,8 +84,8 @@ export default function Pricing() {
       if (data.url) {
         window.location.href = data.url;
       }
-    } catch (err: any) {
-      console.error('Checkout failed:', err.message);
+    } catch (err) {
+      console.error('Checkout failed:', (err as Error).message);
     } finally {
       setLoading(null);
     }

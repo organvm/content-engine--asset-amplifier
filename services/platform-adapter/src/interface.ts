@@ -37,7 +37,7 @@ export interface PostMetrics {
   views: number;
   engagement: number; // likes + comments + shares
   reach?: number;
-  raw: Record<string, any>;
+  raw: Record<string, unknown>;
 }
 
 export interface MediaSpec {

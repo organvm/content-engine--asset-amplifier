@@ -45,10 +45,10 @@ export async function generateIdentityInquiries(nc: Partial<NaturalCenter>): Pro
     return [];
   }
 
-  return inquiries.map((iq: any) => ({
+  return (inquiries as Array<Partial<IdentityInquiry>>).map((iq) => ({
     ...iq,
     id: randomUUID(),
-    status: 'pending',
+    status: 'pending' as const,
     createdAt: new Date(),
-  }));
+  })) as IdentityInquiry[];
 }

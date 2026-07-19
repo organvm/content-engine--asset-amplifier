@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { brandService, contentService } from '../services/api.js';
+import { ContentUnit } from '@cronus/domain';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
 
@@ -36,8 +37,8 @@ function isToday(date: string): boolean {
     && d.getDate() === now.getDate();
 }
 
-function groupByDay(items: any[]): Record<string, any[]> {
-  const groups: Record<string, any[]> = {};
+function groupByDay(items: ContentUnit[]): Record<string, ContentUnit[]> {
+  const groups: Record<string, ContentUnit[]> = {};
   for (const item of items) {
     const key = new Date(item.createdAt).toISOString().slice(0, 10);
     if (!groups[key]) groups[key] = [];
@@ -47,7 +48,7 @@ function groupByDay(items: any[]): Record<string, any[]> {
 }
 
 export default function Calendar() {
-  const [content, setContent] = useState<any[]>([]);
+  const [content, setContent] = useState<ContentUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'approved' | 'pending'>('all');
 
@@ -65,7 +66,7 @@ export default function Calendar() {
 
   const filtered = filter === 'all'
     ? content
-    : content.filter((u: any) => u.approvalStatus === filter);
+    : content.filter((u) => u.approvalStatus === filter);
 
   const grouped = groupByDay(filtered);
   const sortedDays = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
@@ -121,7 +122,7 @@ export default function Calendar() {
 
               {/* Content cards for the day */}
               <div className="space-y-3">
-                {grouped[day].map((unit: any) => (
+                {grouped[day].map((unit) => (
                   <div key={unit.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-start gap-3">
                     {/* Thumbnail */}
                     {unit.mediaKey ? (

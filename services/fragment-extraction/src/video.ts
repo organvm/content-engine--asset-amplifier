@@ -68,7 +68,6 @@ export async function extractVideoFragments(params: {
     // TODO: Implement advanced scene detection via ffprobe select filter
     
     // 4. Extract Keyframes (thumbnails)
-    const keyframesCount = 5;
     const keyframeTimestamps = [0, 5, 10, 15, 20]; // Placeholder timestamps
     
     for (const ts of keyframeTimestamps) {

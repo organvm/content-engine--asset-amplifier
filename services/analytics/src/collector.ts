@@ -1,6 +1,6 @@
 import { getDb, schema } from '@cronus/db';
 import { eq, and } from '@cronus/db';
-import { PublishStatus } from '@cronus/domain';
+import { Platform, PlatformConnection, PublishStatus } from '@cronus/domain';
 import { getAdapter } from '@cronus/platform-adapter';
 import { createLogger } from '@cronus/logger';
 import { randomUUID } from 'node:crypto';
@@ -39,10 +39,10 @@ export async function collectMetrics(brandId: string) {
 
       if (!connection) continue;
 
-      const adapter = getAdapter(connection.platform);
+      const adapter = getAdapter(connection.platform as Platform);
 
       // 3. Fetch metrics from platform
-      const metrics = await adapter.fetchMetrics(publishEvent.platform_post_id, connection as any);
+      const metrics = await adapter.fetchMetrics(publishEvent.platform_post_id, connection as unknown as PlatformConnection);
 
       // 4. Record observation
       await db.insert(schema.performanceObservations).values({
@@ -51,11 +51,11 @@ export async function collectMetrics(brandId: string) {
         observed_at: new Date(),
         views: metrics.views,
         reach: metrics.reach || 0,
-        likes: metrics.raw?.likes ?? 0,
-        comments: metrics.raw?.comments ?? 0,
-        shares: metrics.raw?.shares ?? 0,
-        saves: metrics.raw?.saves ?? 0,
-        clicks: metrics.raw?.clicks ?? 0,
+        likes: Number(metrics.raw?.likes ?? 0),
+        comments: Number(metrics.raw?.comments ?? 0),
+        shares: Number(metrics.raw?.shares ?? 0),
+        saves: Number(metrics.raw?.saves ?? 0),
+        clicks: Number(metrics.raw?.clicks ?? 0),
         raw_metrics: metrics.raw,
       });
 

@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { getDb, schema, toCamel, mapRows } from '@cronus/db';
+import { getDb, schema, mapRows } from '@cronus/db';
 import { eq } from '@cronus/db';
 import { Platform } from '@cronus/domain';
 import { getConfig, encrypt } from '@cronus/config'; // allow-secret
@@ -86,7 +86,7 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
       });
 
       return reply.redirect(`${process.env.DASHBOARD_URL}/platforms?status=success`);
-    } catch (err: any) {
+    } catch (err) {
       log.error({ err }, 'LinkedIn OAuth callback failed');
       return reply.redirect(`${process.env.DASHBOARD_URL}/platforms?status=error`);
     }

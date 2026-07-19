@@ -36,7 +36,7 @@ describe('toSnake', () => {
 
   it('is inverse of toCamel', () => {
     const original = { brand_id: '1', nc_score: 0.85 };
-    expect(toSnake(toCamel(original) as any)).toEqual(original);
+    expect(toSnake(toCamel(original) as Record<string, unknown>)).toEqual(original);
   });
 });
 

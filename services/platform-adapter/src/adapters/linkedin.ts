@@ -7,11 +7,11 @@ const log = createLogger('platform-adapter:linkedin');
 export class LinkedInAdapter implements PlatformAdapter {
   platform = Platform.linkedin;
 
-  async authenticate(connection: PlatformConnection): Promise<boolean> {
+  async authenticate(_connection: PlatformConnection): Promise<boolean> {
     return true;
   }
 
-  async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
+  async publish(unit: ContentUnit, _connection: PlatformConnection): Promise<{
     platformPostId: string;
     platformPostUrl?: string;
   }> {
@@ -22,7 +22,7 @@ export class LinkedInAdapter implements PlatformAdapter {
     };
   }
 
-  async fetchMetrics(platformPostId: string, connection: PlatformConnection): Promise<PostMetrics> {
+  async fetchMetrics(_platformPostId: string, _connection: PlatformConnection): Promise<PostMetrics> {
     return {
       views: 50,
       engagement: 5,
@@ -40,7 +40,7 @@ export class LinkedInAdapter implements PlatformAdapter {
     };
   }
 
-  async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
+  async checkRateLimit(_connection: PlatformConnection): Promise<boolean> {
     return false;
   }
 }

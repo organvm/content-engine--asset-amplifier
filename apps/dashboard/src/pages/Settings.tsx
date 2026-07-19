@@ -63,8 +63,8 @@ export default function Settings() {
 
       setAnthropicKey('');
       setOpenaiKey('');
-    } catch (err: any) {
-      setMessage(`Error: ${err.message}`);
+    } catch (err) {
+      setMessage(`Error: ${(err as Error).message}`);
     } finally {
       setSaving(false);
     }

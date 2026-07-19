@@ -23,11 +23,11 @@ program.command('upload')
       const filename = path.basename(fullPath);
 
       // We'd use form-data here in a real implementation
-      console.log(`Uploading ${filename} for brand ${brandId}...`);
+      console.log(`Uploading ${filename} (${fileBuffer.length} bytes) for brand ${brandId}...`);
       // const response = await axios.post(`${API_URL}/brands/${brandId}/assets`, ...);
       console.log('Upload successful (Mocked)');
-    } catch (err: any) {
-      console.error('Upload failed:', err.message);
+    } catch (err) {
+      console.error('Upload failed:', (err as Error).message);
     }
   });
 
@@ -38,8 +38,8 @@ program.command('status')
     try {
       const response = await axios.get(`${API_URL}/jobs/${jobId}`);
       console.log(JSON.stringify(response.data, null, 2));
-    } catch (err: any) {
-      console.error('Failed to get status:', err.message);
+    } catch (err) {
+      console.error('Failed to get status:', (err as Error).message);
     }
   });
 

@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { getDb, schema, mapRows } from '@cronus/db';
-import { eq, and, gte, lte } from '@cronus/db';
+import { eq } from '@cronus/db';
 import { scheduleContent } from '@cronus/scheduler';
 import { ScheduleStrategy } from '@cronus/domain';
 
@@ -28,19 +28,19 @@ export const scheduleRoutes: FastifyPluginAsync = async (app) => {
         scheduled_count: publishEvents.length,
         publish_events: publishEvents,
       });
-    } catch (err: any) {
-      return reply.status(400).send({ error: err.message });
+    } catch (err) {
+      return reply.status(400).send({ error: (err as Error).message });
     }
   });
 
   // GET /brands/:brandId/calendar
   app.get('/brands/:brandId/calendar', async (request) => {
     const { brandId } = request.params as { brandId: string };
-    const { start_date, end_date } = request.query as { start_date?: string; end_date?: string };
+    const { start_date: _start_date, end_date: _end_date } = request.query as { start_date?: string; end_date?: string };
     const db = getDb();
 
     // Must join through content_units to filter by brand
-    let query = db
+    const query = db
       .select()
       .from(schema.publishEvents)
       .innerJoin(schema.contentUnits, eq(schema.publishEvents.content_unit_id, schema.contentUnits.id))

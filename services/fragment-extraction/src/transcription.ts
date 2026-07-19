@@ -61,8 +61,8 @@ export async function transcribeAndExtractHooks(params: {
     // Simple sentence-based extraction for MVP
     const sentences = text
       .split(/(?<=[.!?])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 30 && s.length < 280); // Sensible lengths for hooks
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 30 && s.length < 280); // Sensible lengths for hooks
 
     for (const sentence of sentences) {
       await db.insert(schema.fragments).values({

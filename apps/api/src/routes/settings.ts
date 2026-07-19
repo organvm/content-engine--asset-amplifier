@@ -65,7 +65,7 @@ export const settingsRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // PUT /settings/keys — update API keys
-  app.put('/settings/keys', async (request, reply) => {
+  app.put('/settings/keys', async (request, _reply) => {
     const body = request.body as Partial<StoredKeys>;
     const existing = await loadKeys();
 
