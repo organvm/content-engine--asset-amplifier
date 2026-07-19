@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import ReviewQueue from './pages/ReviewQueue.js';
+import DesignResize from './pages/DesignResize.js';
 import Settings from './pages/Settings.js';
 import Dashboard from './pages/Dashboard.js';
 import Assets from './pages/Assets.js';
@@ -17,6 +18,7 @@ const navItems = [
   { path: '/roi', label: 'ROI', icon: 'roi' },
   { path: '/review', label: 'Review', icon: 'review' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
+  { path: '/resize', label: 'Resize', icon: 'resize' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -25,6 +27,7 @@ const allNavItems = [
   { path: '/identity', label: 'Brand Identity', icon: 'identity' },
   navItems[4],
   navItems[5],
+  navItems[6],
 ];
 
 /** SVG icons sized for 24x24 viewBox, touch-safe containers */
@@ -72,6 +75,12 @@ const NavIcon: React.FC<{ icon: string; className?: string }> = ({ icon, classNa
       return (
         <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+      );
+    case 'resize':
+      return (
+        <svg className={shared} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
         </svg>
       );
     default:
@@ -359,6 +368,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/assets" element={<Assets />} />
         <Route path="/roi" element={<AssetRoiPage />} />
+        <Route path="/resize" element={<DesignResize />} />
         <Route path="/review" element={<ReviewQueue />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/identity" element={<Identity />} />
