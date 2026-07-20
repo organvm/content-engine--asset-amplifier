@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { assetService } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

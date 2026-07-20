@@ -4,7 +4,7 @@ import { contentService } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
 import { ContentUnit } from '@cronus/domain';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 function scoreColor(score: number): string {
   if (score > 0.8) return 'text-green-700 bg-green-50';

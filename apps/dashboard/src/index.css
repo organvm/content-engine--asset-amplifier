@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -13,6 +11,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   -webkit-text-size-adjust: 100%;
+  background-color: #f9fafb;
 }
 
 /* Mobile-first: prevent iOS auto-zoom on inputs */

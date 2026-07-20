@@ -92,7 +92,7 @@ const NavIcon: React.FC<{ icon: string; className?: string }> = ({ icon, classNa
   }
 };
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 type UploadPhase = 'idle' | 'uploading' | 'generating';
 

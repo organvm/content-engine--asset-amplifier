@@ -10,9 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Component | URL / Identifier |
 |-----------|------------------|
-| API (Cloudflare Worker) | https://cronus-api.ivixivi.workers.dev |
-| Dashboard (Cloudflare Pages) | https://cronus-dashboard.pages.dev |
-| Pitch Decks | https://cronus-metabolus.pages.dev |
+| API (Cloudflare Worker) | http://localhost:3000 |
+| Dashboard (Cloudflare Pages) | http://localhost:5173 |
+| Pitch Decks | https://organvm.github.io/content-engine--asset-amplifier |
 | Database | Neon `green-art-84790526` (PostgreSQL 17 + pgvector) |
 | R2 bucket | `cronus-assets` |
 | Issues | [organvm-iii-ergon/content-engine--asset-amplifier/issues](https://github.com/organvm-iii-ergon/content-engine--asset-amplifier/issues) |

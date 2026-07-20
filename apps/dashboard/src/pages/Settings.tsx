@@ -13,7 +13,7 @@ interface KeysState {
   ollama_model: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const API = `${API_BASE}/api/v1`;
 
 export default function Settings() {

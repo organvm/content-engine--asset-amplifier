@@ -33,7 +33,7 @@
   .orbit-3 { transform: translate(-50%,-50%) rotateX(80deg) rotateY(-15deg); } .orbit-3 .orbit-ring { width: 340px; height: 340px; transform: translate(-50%,-50%); animation: spin 70s linear infinite; border-color: rgba(34,211,168,0.03); }
   @keyframes spin { to { transform: translate(-50%,-50%) rotateZ(360deg); } }
 
-  .reveal-viewport { background: transparent !important; }
+  .reveal-viewport { background: var(--bg) !important; }
   .reveal { font-family: var(--font); color: var(--text); font-size: 20px; }
   .reveal .slides { text-align: left; }
   .reveal .slides section { background: transparent !important; padding: 32px 52px; }
@@ -78,7 +78,7 @@
   .col p { font-size: 0.56em; color: var(--text-dim); line-height: 1.45; font-weight: 300; margin: 0; }
   .big { font-size: 1.7em; font-weight: 200; line-height: 1.15; text-align: center; }
   .note { font-size: 0.52em; color: var(--text-muted); font-weight: 300; }
-  .cta { display: inline-block; padding: 10px 28px; border-radius: 8px; background: var(--grad); color: #fff; font-weight: 500; font-size: 0.65em; margin-top: 0.8em; letter-spacing: 0.02em; border: none; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .cta { display: inline-block; padding: 10px 28px; border-radius: 8px; background: var(--grad); color: #fff; font-weight: 500; font-size: 0.65em; margin-top: 0.8em; letter-spacing: 0.02em; border: none; cursor: pointer; text-decoration: none; transition: transform 0.3s ease, box-shadow 0.3s ease; }
   .cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(79,125,245,0.2); }
 
   .content-grid { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4px; margin: 0.6em auto; max-width: 460px; }
@@ -107,7 +107,7 @@
 <section class="centered">
   <h1 class="enter-title"><span class="grad">Turn one piece of content<br>into months of posts</span></h1>
   <p class="enter-title" style="font-size:0.85em;color:var(--text-dim);margin-top:0.4em;font-weight:200;">Upload a video. Get 30&ndash;90 days of platform-ready content. Automatically.</p>
-  <div class="enter-title"><div class="cta">Upload Your First Asset</div></div>
+  <div class="enter-title"><a class="cta" href="index.html">Upload Your First Asset</a></div>
 </section>
 
 <section class="centered">
@@ -196,8 +196,8 @@
     Turn your content<br>into <span class="grad">a system</span>
   </div>
   <p class="enter-title" style="font-size:0.82em;color:var(--text-dim);margin-top:0.5em;font-weight:200;">You don&rsquo;t just get a video. You get a system that turns it into ongoing results.</p>
-  <div class="enter-title"><div class="cta" style="margin-top:1em;">Get Started</div></div>
-  <p class="enter-title note" style="margin-top:1.5em;">padavano.anthony@gmail.com &bull; Padavano &times; Lefler Design</p>
+  <div class="enter-title"><a class="cta" href="index.html" style="margin-top:1em;">Get Started</a></div>
+  <p class="enter-title note" style="margin-top:1.5em;"><a href="mailto:padavano.anthony@gmail.com" style="color:var(--text-muted);text-decoration:none;">padavano.anthony@gmail.com</a> &bull; Padavano &times; Lefler Design</p>
 </section>
 
 </div></div>
