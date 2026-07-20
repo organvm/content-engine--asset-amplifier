@@ -16,6 +16,10 @@ import { resizeRoutes } from './routes/resize.js';
 import { authPlugin } from './plugins/auth.js';
 import { settingsRoutes } from './routes/settings.js';
 import { billingRoutes } from './routes/billing.js';
+import { projectRoutes } from './routes/projects.js';
+import { publicationVariantRoutes } from './routes/publication-variants.js';
+import { linkedApplicationRoutes } from './routes/linked-applications.js';
+import { conversionEventRoutes } from './routes/conversion-events.js';
 
 const log = createLogger('api');
 
@@ -56,6 +60,10 @@ export async function buildApp() {
   await app.register(resizeRoutes, { prefix: '/api/v1' });
   await app.register(settingsRoutes, { prefix: '/api/v1' });
   await app.register(billingRoutes, { prefix: '/api/v1' });
+  await app.register(projectRoutes, { prefix: '/api/v1' });
+  await app.register(publicationVariantRoutes, { prefix: '/api/v1' });
+  await app.register(linkedApplicationRoutes, { prefix: '/api/v1' });
+  await app.register(conversionEventRoutes, { prefix: '/api/v1' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));

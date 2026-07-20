@@ -11,7 +11,7 @@ function confidenceScore(nc: Record<string, unknown>, key: string): number {
 
 export default function Identity() {
   const { brandId } = useBrand();
-  const [nc, setNc] = useState<any>(null);
+  const [nc, setNc] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [deriving, setDeriving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +39,8 @@ export default function Identity() {
         } catch { setError('Derivation in progress — refresh in a moment.'); }
         setDeriving(false);
       }, 10000);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
       setDeriving(false);
     }
   };

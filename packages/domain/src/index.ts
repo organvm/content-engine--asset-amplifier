@@ -279,6 +279,9 @@ export interface Job {
 
 export type CreateBrand = Omit<Brand, "id" | "slug" | "createdAt" | "updatedAt">;
 
+export type CreateAgency = Pick<Agency, "name" | "contactEmail"> &
+  Partial<Pick<Agency, "logoUrl" | "primaryColor">>;
+
 export type CreateAsset = Pick<
   Asset,
   "brandId" | "mediaType" | "originalFilename" | "storageKey" | "fileSizeBytes"

@@ -20,9 +20,20 @@ function timeAgo(date: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+interface Asset {
+  id: string;
+  mediaType: string;
+  storageKey: string;
+  originalFilename: string;
+  processingStatus: string;
+  fileSizeBytes: number;
+  createdAt: string;
+  fragmentCount: number;
+}
+
 export default function Assets() {
   const { brandId } = useBrand();
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,7 +57,7 @@ export default function Assets() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assets.map((asset: any) => (
+          {assets.map((asset: Asset) => (
             <div key={asset.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               {/* Preview */}
               <div className="aspect-video bg-gray-100 relative flex items-center justify-center">
