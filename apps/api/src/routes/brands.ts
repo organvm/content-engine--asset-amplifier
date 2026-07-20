@@ -50,4 +50,27 @@ export const brandRoutes: FastifyPluginAsync = async (app) => {
 
     return toCamel(brand);
   });
+
+  app.patch('/brands/:brandId', async (request, reply) => {
+    const { brandId } = request.params as { brandId: string };
+    const body = request.body as Record<string, unknown>;
+    const db = getDb();
+
+    const [existing] = await db.select().from(schema.brands).where(eq(schema.brands.id, brandId));
+    if (!existing) return reply.status(404).send({ error: 'Brand not found' });
+
+    const allowed = ['name', 'description', 'tone_description', 'consistency_threshold', 'agency_id', 'status', 'brand_guidelines_url'];
+    const updates: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (body[key] !== undefined) updates[key] = body[key];
+      else {
+        const camel = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+        if (body[camel] !== undefined) updates[key] = body[camel];
+      }
+    }
+    if (Object.keys(updates).length === 0) return toCamel(existing);
+
+    const [updated] = await db.update(schema.brands).set({ ...updates, updated_at: new Date() }).where(eq(schema.brands.id, brandId)).returning();
+    return toCamel(updated);
+  });
 };
