@@ -113,7 +113,6 @@ Return this exact JSON structure:
 
     // 7. Persistence
     const [nc] = await db.insert(schema.naturalCenters).values({
-      id: randomUUID(),
       brand_id: brandId,
       version: 1,
       thematic_core: profile.thematic_core,
@@ -122,7 +121,7 @@ Return this exact JSON structure:
       narrative_bias: profile.narrative_bias,
       symbolic_markers: profile.symbolic_markers,
       negative_space: profile.negative_space,
-      brand_embedding: JSON.stringify(brandEmbedding),
+      brand_embedding: brandEmbedding,
       confidence_scores: confidenceScores,
       overall_confidence: 0.65,
       source_asset_ids: assetIds,
@@ -134,7 +133,7 @@ Return this exact JSON structure:
       set: {
         version: sql`${schema.naturalCenters.version} + 1`,
         thematic_core: profile.thematic_core,
-        brand_embedding: JSON.stringify(brandEmbedding),
+        brand_embedding: brandEmbedding,
         system_prompt: systemPrompt,
         inquiries: inquiries,
       }

@@ -31,7 +31,6 @@ export const contentService = {
     api.post(`/brands/${brandId}/content/${id}/reject`, { reason }),
   generate: (brandId: string, assetId: string) => 
     api.post(`/brands/${brandId}/generate`, { asset_id: assetId }),
-  get: (brandId: string, id: string) => api.get<ContentUnit>(`/brands/${brandId}/content/${id}`).then(r => r.data),
 };
 
 export const identityService = {
