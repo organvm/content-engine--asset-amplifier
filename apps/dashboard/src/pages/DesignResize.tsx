@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useBrand } from '../services/BrandContext.js';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 interface ResizeFormat {
   id: string;

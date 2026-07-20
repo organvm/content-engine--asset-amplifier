@@ -3,7 +3,7 @@ import { assetService, contentService } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
 import { Link } from 'react-router-dom';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://cronus-api.ivixivi.workers.dev';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Dashboard() {
   const { selectedBrand, brandId } = useBrand();
