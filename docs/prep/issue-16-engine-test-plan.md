@@ -23,8 +23,8 @@ The content engine is live and functional. This document provides a comprehensiv
 ### Prerequisites
 
 **Dashboard Access:**
-- URL: https://cronus-dashboard.pages.dev
-- API health: https://cronus-api.ivixivi.workers.dev/health
+- URL: http://localhost:5173 (local dev)
+- API health: http://localhost:3000/health (local dev)
 - Test brand: Create or use existing brand in the system
 
 **Required Accounts:**
@@ -119,7 +119,7 @@ The content engine is live and functional. This document provides a comprehensiv
 ### Phase 1: Upload & Ingestion (5 minutes)
 
 **Steps:**
-1. Navigate to https://cronus-dashboard.pages.dev
+1. Navigate to http://localhost:5173 (local dev)
 2. Click "Upload Asset" (top right)
 3. Select test asset (start with product shot)
 4. Wait for upload to complete (~5-10 seconds)
@@ -460,7 +460,7 @@ The content engine is live and functional. This document provides a comprehensiv
 - Error message in console
 
 **Troubleshooting:**
-1. Check API health: https://cronus-api.ivixivi.workers.dev/health
+1. Check API health: http://localhost:3000/health (local dev)
 2. Check browser console for errors
 3. Verify API keys are configured (Settings page)
 4. Try uploading a different asset

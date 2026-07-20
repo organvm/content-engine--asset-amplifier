@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Three pitch deck variants are live at **https://cronus-metabolus.pages.dev**:
+Three pitch deck variants are live at **https://organvm.github.io/content-engine--asset-amplifier**:
 - **Investor** (12 slides) — VC-grade: system, category, defensibility
 - **Agency** (12 slides) — Revenue, upsell, white-label
 - **Product** (8 slides) — Upload → generate → track
