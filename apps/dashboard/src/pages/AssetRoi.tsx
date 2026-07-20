@@ -8,12 +8,6 @@ function formatNumber(n: number): string {
   return String(n);
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
-}
-
 export default function AssetRoiPage() {
   const { brandId, selectedBrand } = useBrand();
   const [assets, setAssets] = useState<AssetRoi[]>([]);
@@ -36,7 +30,7 @@ export default function AssetRoiPage() {
   const totalEngagement = assets.reduce((s, a) => s + a.totalEngagement, 0);
   const avgEngagementRate = totalViews > 0 ? (totalEngagement / totalViews * 100).toFixed(1) : '0.0';
   const yieldRatio = totalContent > 0 ? (totalApproved / totalContent * 100).toFixed(0) : '0';
-  const contentPerAsset = assets.length > 0 ? (totalContent / assets.length).toFixed(1) : '0';
+  const _contentPerAsset = assets.length > 0 ? (totalContent / assets.length).toFixed(1) : '0';
 
   const sorted = [...assets].sort((a, b) => b[sortKey] - a[sortKey]);
 

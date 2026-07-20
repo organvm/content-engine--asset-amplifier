@@ -13,7 +13,7 @@ export class XAdapter implements PlatformAdapter {
     return true;
   }
 
-  async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
+  async publish(unit: ContentUnit, _connection: PlatformConnection): Promise<{
     platformPostId: string;
     platformPostUrl?: string;
   }> {

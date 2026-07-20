@@ -3,7 +3,6 @@ import { getDb, schema } from '@cronus/db';
 import { eq, inArray, and, sql } from '@cronus/db';
 import { createLogger } from '@cronus/logger';
 import { FragmentType } from '@cronus/domain';
-import { randomUUID } from 'node:crypto';
 import { generateIdentityInquiries } from './inquiry.js';
 
 const log = createLogger('natural-center:derive');

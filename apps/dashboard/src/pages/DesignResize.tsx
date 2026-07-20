@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useBrand } from '../services/BrandContext.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { BrandProvider, useBrand } from './services/BrandContext.js';
 import ReviewQueue from './pages/ReviewQueue.js';
@@ -78,7 +78,7 @@ type UploadPhase = 'idle' | 'uploading' | 'generating';
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { brands, selectedBrand, brandId, loading: brandLoading, selectBrand } = useBrand();
+  const { brands, selectedBrand: _selectedBrand, brandId, loading: brandLoading, selectBrand } = useBrand();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase>('idle');
