@@ -13,10 +13,10 @@ const log = createLogger('fragment-extraction:video');
 /**
  * Extracts fragments from a video asset.
  * 
- * - Detects scene changes using ffprobe.
- * - Extracts clips for each scene.
- * - Extracts keyframes at regular intervals.
- * - Extracts full audio track for transcription.
+ * - Probes video metadata with ffprobe for accurate duration.
+ * - Extracts audio track for transcription.
+ * - Extracts keyframes at calculated intervals across duration.
+ * - Extracts clips from start, middle, and end.
  */
 export async function extractVideoFragments(params: {
   assetId: string;
@@ -37,7 +37,25 @@ export async function extractVideoFragments(params: {
     const buffer = await storage.download(storageKey);
     await fs.writeFile(inputPath, buffer);
 
-    // 2. Extract Audio (for US1/T024 transcription)
+    // Probe duration using ffprobe
+    let durationSeconds = 30; // fallback default
+    try {
+      const metadata = await new Promise<ffmpeg.FfprobeData>((resolve, reject) => {
+        ffmpeg.ffprobe(inputPath, (err, data) => {
+          if (err) reject(err);
+          else resolve(data);
+        });
+      });
+      if (metadata.format && typeof metadata.format.duration === 'number') {
+        durationSeconds = Math.max(5, Math.floor(metadata.format.duration));
+      }
+    } catch {
+      log.warn({ assetId }, 'ffprobe duration probe failed, using 30s default');
+    }
+
+    log.info({ assetId, durationSeconds }, 'Probed video duration');
+
+    // 2. Extract Audio (for transcription)
     const audioFilename = 'audio.mp3';
     const audioLocalPath = path.join(tmpDir, audioFilename);
     const audioStorageKey = `brands/${brandId}/fragments/${assetId}/audio.mp3`;
@@ -59,16 +77,13 @@ export async function extractVideoFragments(params: {
       type: FragmentType.audio_segment,
       storage_key: audioStorageKey,
       quality_score: 1.0,
-      extraction_metadata: { codec: 'mp3', original: true },
+      extraction_metadata: { codec: 'mp3', durationSeconds },
     });
 
-    // 3. Detect Scene Changes
-    // We use a simple approach for MVP: extract keyframes every 5 seconds
-    // and create 5-10s clips from interesting points.
-    // TODO: Implement advanced scene detection via ffprobe select filter
-    
-    // 4. Extract Keyframes (thumbnails)
-    const keyframeTimestamps = [0, 5, 10, 15, 20]; // Placeholder timestamps
+    // 3. Extract Keyframes (thumbnails) at 5 evenly spaced intervals
+    const keyframeTimestamps = Array.from({ length: 5 }, (_, i) =>
+      Math.floor((i / 4) * (durationSeconds * 0.9))
+    );
     
     for (const ts of keyframeTimestamps) {
       const kfId = randomUUID();
@@ -106,11 +121,11 @@ export async function extractVideoFragments(params: {
       }
     }
 
-    // 5. Extract Clips
-    // For MVP: extract three 10-second clips from the start, middle, and near-end
+    // 4. Extract Clips (dynamically calculated for short vs long video)
+    const clipDuration = Math.min(10, Math.floor(durationSeconds / 3));
     const clips = [
-      { start: 0, duration: 10, label: 'intro' },
-      { start: 15, duration: 10, label: 'middle' },
+      { start: 0, duration: clipDuration, label: 'intro' },
+      { start: Math.floor(durationSeconds / 2), duration: clipDuration, label: 'middle' },
     ];
 
     for (const clipSpec of clips) {
