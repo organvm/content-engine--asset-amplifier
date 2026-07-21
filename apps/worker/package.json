@@ -24,6 +24,7 @@
     "@cronus/natural-center": "workspace:*",
     "@cronus/platform-adapter": "workspace:*",
     "@cronus/queue": "workspace:*",
+    "@cronus/scheduler": "workspace:*",
     "bullmq": "^5.41.6",
     "ioredis": "^5.4.1"
   },

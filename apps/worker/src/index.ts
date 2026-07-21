@@ -1,5 +1,6 @@
 import { createWorker } from '@cronus/queue';
 import { createLogger } from '@cronus/logger';
+import { startSchedulerLoop } from '@cronus/scheduler';
 import { processAsset } from './processors/asset.js';
 import { executePublish } from './processors/publish.js';
 import { processContentGenerate } from './processors/content-generate.js';
@@ -8,7 +9,9 @@ import { processNcDerive } from './processors/nc-derive.js';
 const logger = createLogger('worker-main');
 
 async function main() {
-  logger.info('Starting Cronus Background Workers...');
+  logger.info('Starting Cronus Background Workers & Scheduler...');
+
+  const schedulerLoop = startSchedulerLoop(60000); // Poll every 60 seconds
 
   const assetWorker = createWorker('asset.process', async (job) => {
     logger.info({ data: job.data }, `Starting asset processing for job ${job.id}`);
@@ -43,7 +46,8 @@ async function main() {
   });
 
   const gracefulShutdown = async () => {
-    logger.info('Shutting down workers...');
+    logger.info('Shutting down workers and scheduler loop...');
+    schedulerLoop.stop();
     await Promise.all(workers.map((w) => w.close()));
     process.exit(0);
   };
