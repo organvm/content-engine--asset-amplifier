@@ -30,11 +30,25 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
 
     if (platform === 'linkedin') {
       const clientId = config.LINKEDIN_CLIENT_ID; // allow-secret
-      const redirectUri = `${process.env.API_URL}/api/v1/platforms/callback/linkedin`;
+      const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/linkedin`;
       const scope = encodeURIComponent('w_member_social r_liteprofile');
-
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${brandId}`;
+      return reply.redirect(authUrl);
+    }
 
+    if (platform === 'instagram') {
+      const clientId = process.env.INSTAGRAM_CLIENT_ID || 'meta_client_id_placeholder';
+      const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/instagram`;
+      const scope = encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list');
+      const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${brandId}`;
+      return reply.redirect(authUrl);
+    }
+
+    if (platform === 'tiktok') {
+      const clientKey = process.env.TIKTOK_CLIENT_KEY || 'tiktok_client_key_placeholder';
+      const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/tiktok`;
+      const scope = encodeURIComponent('user.info.basic,video.upload,video.publish');
+      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&response_type=code&scope=${scope}&redirect_uri=${redirectUri}&state=${brandId}`;
       return reply.redirect(authUrl);
     }
 
@@ -48,23 +62,19 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
     const db = getDb();
 
     try {
-      // 1. Exchange code for token
       const response = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', null, {
         params: {
           grant_type: 'authorization_code',
           code,
           client_id: config.LINKEDIN_CLIENT_ID, // allow-secret
           client_secret: config.LINKEDIN_CLIENT_SECRET, // allow-secret
-          redirect_uri: `${process.env.API_URL}/api/v1/platforms/callback/linkedin`,
+          redirect_uri: `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/linkedin`,
         },
       });
 
       const { access_token } = response.data; // allow-secret
-
-      // 2. Encrypt token
       const encryptedToken = encrypt(access_token); // allow-secret
 
-      // 3. Upsert platform connection
       await db.insert(schema.platformConnections).values({
         id: randomUUID(),
         brand_id: brandId,
@@ -85,10 +95,26 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
         },
       });
 
-      return reply.redirect(`${process.env.DASHBOARD_URL}/platforms?status=success`);
+      return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=success`);
     } catch (err) {
       log.error({ err }, 'LinkedIn OAuth callback failed');
-      return reply.redirect(`${process.env.DASHBOARD_URL}/platforms?status=error`);
+      return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=error`);
     }
+  });
+
+  // GET /platforms/callback/instagram
+  app.get('/platforms/callback/instagram', async (request, reply) => {
+    const { state: brandId } = request.query as { code?: string; state: string };
+    // Callback placeholder for Meta Graph token exchange
+    log.info({ brandId }, 'Instagram OAuth callback received');
+    return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=success`);
+  });
+
+  // GET /platforms/callback/tiktok
+  app.get('/platforms/callback/tiktok', async (request, reply) => {
+    const { state: brandId } = request.query as { code?: string; state: string };
+    // Callback placeholder for TikTok v2 token exchange
+    log.info({ brandId }, 'TikTok OAuth callback received');
+    return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=success`);
   });
 };
