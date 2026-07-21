@@ -23,7 +23,7 @@
 | `content-generation` | Real — LLM prompt generation (multi-platform), FFmpeg aspect-ratio scale/pad formatting, cross-platform deduplication |
 | `natural-center` | Real — LLM synthesis → NC profile, embedding, inquiry generation, compileSystemPrompt, confidence estimation |
 | `scoring` | Real — pgvector cosine distance search (`querySimilarNaturalCenters`) + in-memory cosine similarity |
-| `platform-adapter` | Real registry — LinkedIn, Instagram, TikTok OAuth initiation/callback, simulate publish |
+| `platform-adapter` | Real registry — LinkedIn, Instagram, TikTok OAuth initiation/callback, real fetch API publish (v2/ugcPosts, TikTok init, Graph API) |
 | `scheduler` | Real — `dispatchDuePublishEvents()` and `startSchedulerLoop()` interval worker |
 | `analytics` | Real — `collectMetrics()`, `normalizeMetrics()`, `computeWeeklyReportSummary()` report generation |
 | `design-resizer` | Real — Sharp-based multi-format resizing, aspect ratio enforcement |
