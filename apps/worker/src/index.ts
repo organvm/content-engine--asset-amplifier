@@ -2,6 +2,8 @@ import { createWorker } from '@cronus/queue';
 import { createLogger } from '@cronus/logger';
 import { processAsset } from './processors/asset.js';
 import { executePublish } from './processors/publish.js';
+import { processContentGenerate } from './processors/content-generate.js';
+import { processNcDerive } from './processors/nc-derive.js';
 
 const logger = createLogger('worker-main');
 
@@ -13,12 +15,24 @@ async function main() {
     await processAsset(job.data);
   });
 
+  const contentGenWorker = createWorker('content.generate', async (job) => {
+    logger.info({ data: job.data }, `Starting content generation for job ${job.id}`);
+    await processContentGenerate(job.data);
+  });
+
   const publishWorker = createWorker('publish.execute', async (job) => {
     logger.info({ data: job.data }, `Starting publish execution for job ${job.id}`);
     await executePublish(job.data);
   });
 
-  [assetWorker, publishWorker].forEach((worker) => {
+  const ncDeriveWorker = createWorker('nc.derive', async (job) => {
+    logger.info({ data: job.data }, `Starting NC derivation for job ${job.id}`);
+    await processNcDerive(job.data);
+  });
+
+  const workers = [assetWorker, contentGenWorker, publishWorker, ncDeriveWorker];
+
+  workers.forEach((worker) => {
     worker.on('completed', (job) => {
       logger.info(`Job ${job.id} (${worker.name}) completed successfully`);
     });
@@ -30,7 +44,7 @@ async function main() {
 
   const gracefulShutdown = async () => {
     logger.info('Shutting down workers...');
-    await Promise.all([assetWorker.close(), publishWorker.close()]);
+    await Promise.all(workers.map((w) => w.close()));
     process.exit(0);
   };
 

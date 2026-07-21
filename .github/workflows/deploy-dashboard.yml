@@ -1,18 +1,21 @@
-name: Deploy API (Cloudflare Workers)
+name: Deploy Dashboard (Cloudflare Pages)
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'apps/api/**'
-      - 'packages/**'
-      - 'services/**'
+      - 'apps/dashboard/**'
+      - 'packages/domain/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy
+    name: Build & Deploy Dashboard
+    permissions:
+      contents: read
+      deployments: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,15 +39,20 @@ jobs:
             exit 1
           fi
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build workspace
         run: pnpm run build
 
-      - name: Deploy to Cloudflare Workers
+      - name: Build dashboard
+        run: pnpm --filter @cronus/dashboard build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
-          workingDirectory: 'apps/api'
+          command: pages deploy apps/dashboard/dist --project-name=cronus-dashboard

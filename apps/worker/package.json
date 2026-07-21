@@ -16,9 +16,12 @@
   "dependencies": {
     "@cronus/asset-ingestion": "workspace:*",
     "@cronus/config": "workspace:*",
+    "@cronus/content-generation": "workspace:*",
     "@cronus/db": "workspace:*",
     "@cronus/domain": "workspace:*",
+    "@cronus/fragment-extraction": "workspace:*",
     "@cronus/logger": "workspace:*",
+    "@cronus/natural-center": "workspace:*",
     "@cronus/platform-adapter": "workspace:*",
     "@cronus/queue": "workspace:*",
     "bullmq": "^5.41.6",

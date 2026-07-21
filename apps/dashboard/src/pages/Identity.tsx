@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { identityService, NaturalCenter } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
 import RadarChart from '../components/RadarChart.js';
+import { IdentityInquiry } from '@cronus/domain';
 
 function confidenceScore(nc: Record<string, unknown>, key: string): number {
   const scores = nc.confidenceScores as Record<string, number> | undefined;
@@ -17,6 +18,8 @@ export default function Identity() {
   const [error, setError] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [selectedDim, setSelectedDim] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submittingInquiry, setSubmittingInquiry] = useState<string | null>(null);
 
   useEffect(() => {
     if (!brandId) { setLoading(false); return; }
@@ -42,6 +45,20 @@ export default function Identity() {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
       setDeriving(false);
+    }
+  };
+
+  const handleAnswerInquiry = async (inquiryId: string) => {
+    if (!brandId || !answers[inquiryId]) return;
+    setSubmittingInquiry(inquiryId);
+    try {
+      await identityService.answerInquiry(brandId, inquiryId, answers[inquiryId]);
+      const updatedNc = await identityService.get(brandId);
+      setNc(updatedNc);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmittingInquiry(null);
     }
   };
 
@@ -188,6 +205,69 @@ export default function Identity() {
           </pre>
         )}
       </div>
+
+      {/* Identity Inquiries */}
+      {nc.inquiries && nc.inquiries.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Identity Inquiries</h3>
+          <p className="text-xs text-gray-500">Clarifying questions generated to refine low-confidence dimensions.</p>
+          <div className="space-y-4">
+            {(nc.inquiries as IdentityInquiry[]).map(inq => (
+              <div key={inq.id} className="border border-gray-100 rounded-lg p-4 bg-gray-50/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">{inq.dimension}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                    inq.status === 'answered' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {inq.status}
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-gray-900">{inq.question}</p>
+                {inq.status === 'answered' ? (
+                  <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-md p-2">
+                    <strong className="text-gray-900">Answer:</strong> {inq.answer}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {inq.options && inq.options.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {inq.options.map((opt, i) => (
+                          <label key={i} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`inquiry-${inq.id}`}
+                              value={opt}
+                              checked={answers[inq.id] === opt}
+                              onChange={() => setAnswers(prev => ({ ...prev, [inq.id]: opt }))}
+                              className="text-blue-600 focus:ring-blue-500"
+                            />
+                            {opt}
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <textarea
+                        rows={2}
+                        value={answers[inq.id] || ''}
+                        onChange={e => setAnswers(prev => ({ ...prev, [inq.id]: e.target.value }))}
+                        placeholder="Type your answer..."
+                        className="w-full text-xs border border-gray-300 rounded-md p-2 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
+                    <button
+                      onClick={() => handleAnswerInquiry(inq.id)}
+                      disabled={!answers[inq.id] || submittingInquiry === inq.id}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {submittingInquiry === inq.id ? 'Submitting...' : 'Submit Answer'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

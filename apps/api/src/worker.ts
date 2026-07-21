@@ -5,7 +5,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type Stripe from 'stripe';
-import { getDb, schema, toCamel, mapRows, eq, desc } from '@cronus/db';
+import { getDb, schema, toCamel, mapRows, eq, desc, inArray } from '@cronus/db';
 import { resolveProviders } from '@cronus/config';
 
 type Bindings = {
@@ -407,6 +407,93 @@ app.post('/api/v1/billing/webhook', async (c) => {
   }
 
   return c.json({ received: true });
+});
+
+// ── Asset ROI ─────────────────────────────────────────────────
+app.get('/api/v1/brands/:brandId/roi', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+
+  // Get all assets for brand
+  const assets = await db.select().from(schema.assets)
+    .where(eq(schema.assets.brand_id, brandId));
+
+  const roi = await Promise.all(assets.map(async (asset) => {
+    // Get content units for this asset's fragments
+    const fragments = await db.select({ id: schema.fragments.id })
+      .from(schema.fragments)
+      .where(eq(schema.fragments.asset_id, asset.id));
+
+    const fragmentIds = fragments.map(f => f.id);
+
+    let contentCount = 0, approvedCount = 0;
+    const platformSet = new Set<string>();
+    let totalViews = 0, totalEngagement = 0;
+
+    if (fragmentIds.length > 0) {
+      const units = await db.select().from(schema.contentUnits)
+        .where(inArray(schema.contentUnits.fragment_id, fragmentIds));
+
+      contentCount = units.length;
+      approvedCount = units.filter(u => u.approval_status === 'approved').length;
+      units.forEach(u => { if (u.platform) platformSet.add(u.platform); });
+
+      // Performance observations
+      const unitIds = units.map(u => u.id);
+      if (unitIds.length > 0) {
+        const publishEvents = await db.select({ id: schema.publishEvents.id })
+          .from(schema.publishEvents)
+          .where(inArray(schema.publishEvents.content_unit_id, unitIds));
+
+        if (publishEvents.length > 0) {
+          const obs = await db.select().from(schema.performanceObservations)
+            .where(inArray(schema.performanceObservations.publish_event_id, publishEvents.map(e => e.id)));
+          totalViews = obs.reduce((s, o) => s + (o.views ?? 0), 0);
+          totalEngagement = obs.reduce((s, o) => s + (o.likes ?? 0) + (o.comments ?? 0) + (o.shares ?? 0), 0);
+        }
+      }
+    }
+
+    return {
+      assetId: asset.id,
+      assetName: asset.original_filename,
+      mediaType: asset.media_type,
+      createdAt: asset.created_at,
+      contentCount,
+      approvedCount,
+      platformCount: platformSet.size,
+      totalViews,
+      totalEngagement,
+    };
+  }));
+
+  return c.json(roi);
+});
+
+// ── Natural Center Inquiries ───────────────────────────────────
+app.post('/api/v1/brands/:brandId/natural-center/inquiries/:inquiryId/answer', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+  const inquiryId = c.req.param('inquiryId');
+  const body = await c.req.json();
+  const answer = body.answer as string;
+
+  const [nc] = await db.select().from(schema.naturalCenters)
+    .where(eq(schema.naturalCenters.brand_id, brandId));
+
+  if (!nc) return c.json({ error: 'No identity profile found' }, 404);
+
+  // Update inquiry in JSONB array
+  const inquiries = (nc.inquiries as Array<Record<string, unknown>>) || [];
+  const updated = inquiries.map(inq =>
+    inq.id === inquiryId ? { ...inq, answer, status: 'answered' } : inq
+  );
+
+  await db.update(schema.naturalCenters)
+    .set({ inquiries: updated })
+    .where(eq(schema.naturalCenters.brand_id, brandId));
+
+  return c.json({ status: 'answered', inquiryId });
 });
 
 export default app;
