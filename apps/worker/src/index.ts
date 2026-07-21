@@ -5,6 +5,7 @@ import { processAsset } from './processors/asset.js';
 import { executePublish } from './processors/publish.js';
 import { processContentGenerate } from './processors/content-generate.js';
 import { processNcDerive } from './processors/nc-derive.js';
+import { processAnalyticsCollect } from './processors/analytics.js';
 
 const logger = createLogger('worker-main');
 
@@ -33,7 +34,12 @@ async function main() {
     await processNcDerive(job.data);
   });
 
-  const workers = [assetWorker, contentGenWorker, publishWorker, ncDeriveWorker];
+  const analyticsWorker = createWorker('analytics.collect', async (job) => {
+    logger.info({ data: job.data }, `Starting analytics collection for job ${job.id}`);
+    await processAnalyticsCollect(job.data);
+  });
+
+  const workers = [assetWorker, contentGenWorker, publishWorker, ncDeriveWorker, analyticsWorker];
 
   workers.forEach((worker) => {
     worker.on('completed', (job) => {

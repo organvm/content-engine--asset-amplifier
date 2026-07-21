@@ -211,6 +211,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@cronus/analytics':
+        specifier: workspace:*
+        version: link:../../services/analytics
       '@cronus/asset-ingestion':
         specifier: workspace:*
         version: link:../../services/asset-ingestion
@@ -244,6 +247,9 @@ importers:
       '@cronus/scheduler':
         specifier: workspace:*
         version: link:../../services/scheduler
+      '@cronus/scoring':
+        specifier: workspace:*
+        version: link:../../services/scoring
       bullmq:
         specifier: ^5.41.6
         version: 5.80.1
