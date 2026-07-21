@@ -68,7 +68,6 @@ export class S3StorageClient implements StorageClient {
       throw new Error(`Empty body returned for key: ${key}`);
     }
 
-    // Collect the readable stream into a Buffer
     const chunks: Uint8Array[] = [];
     for await (const chunk of res.Body as AsyncIterable<Uint8Array>) {
       chunks.push(chunk);
@@ -110,7 +109,7 @@ export class S3StorageClient implements StorageClient {
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-class FilesystemStorageClient implements StorageClient {
+export class FilesystemStorageClient implements StorageClient {
   private basePath: string;
 
   constructor(basePath: string) {
@@ -168,7 +167,6 @@ export function createStorage(): StorageClient {
   const region = process.env.STORAGE_REGION ?? 'auto';
 
   if (!endpoint || !accessKey || !secretKey || !bucket) {
-    // Fall back to filesystem if no S3 config
     const fallbackPath = process.env.STORAGE_PATH ?? './data/assets';
     return new FilesystemStorageClient(fallbackPath);
   }
