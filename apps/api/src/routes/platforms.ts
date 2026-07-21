@@ -26,9 +26,9 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
   // GET /brands/:brandId/platforms/connect/:platform
   app.get('/brands/:brandId/platforms/connect/:platform', async (request, reply) => {
     const { brandId, platform } = request.params as { brandId: string; platform: string };
-    const config = getConfig();
 
     if (platform === 'linkedin') {
+      const config = getConfig();
       const clientId = config.LINKEDIN_CLIENT_ID; // allow-secret
       const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/linkedin`;
       const scope = encodeURIComponent('w_member_social r_liteprofile');
