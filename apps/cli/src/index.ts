@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import axios from 'axios';
+import { ingestCommand } from './commands/ingest.js';
 
 const program = new Command();
 const API_URL = process.env.API_URL || 'http://localhost:3000/api/v1';
@@ -10,7 +11,8 @@ const API_URL = process.env.API_URL || 'http://localhost:3000/api/v1';
 program
   .name('cronus')
   .description('CLI for Managing the Cronus Metabolus Content Engine')
-  .version('0.1.0');
+  .version('0.1.0')
+  .addCommand(ingestCommand);
 
 program.command('upload')
   .description('Upload an asset for a brand')

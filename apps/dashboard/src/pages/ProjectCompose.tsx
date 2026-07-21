@@ -263,7 +263,7 @@ function ApplicationTab({ brandId, projectId }: { brandId: string; projectId: st
 }
 
 // ─── Launch Tab ──────────────────────────────────────────────────────────────
-function LaunchTab({ project, onStatusChange }: { project: ArtworkProject; onStatusChange: (s: string) => void }) {
+function LaunchTab({ brandId, project, onStatusChange }: { brandId: string; project: ArtworkProject; onStatusChange: (s: string) => void }) {
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
   return (
     <div>
@@ -321,7 +321,113 @@ function LaunchTab({ project, onStatusChange }: { project: ArtworkProject; onSta
             <p className="text-xs text-yellow-700 mt-1">All publication variants are approved and the application is configured. Click "Launch" to go live.</p>
           </div>
         )}
+
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <span className="text-xs text-gray-500 block mb-2">Developer Tools</span>
+          <button 
+            onClick={() => exportManifest(brandId, project)} 
+            className="px-4 py-2 text-sm border border-gray-300 bg-white rounded-lg hover:bg-gray-50 min-h-[44px]"
+          >
+            Export JSON Manifest
+          </button>
+        </div>
       </div>
+    </div>
+  );
+}
+
+async function exportManifest(brandId: string, project: ArtworkProject) {
+  try {
+    const manifest = await projectService.getManifest(brandId, project.id);
+    const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${manifest.id}-manifest.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Failed to export manifest', err);
+    alert('Failed to export manifest. Please try again.');
+  }
+}
+
+// ─── Grid Simulator (Visuals Tab) ────────────────────────────────────────────
+function GridSimulator({ brandId, projectId, project, assets }: { brandId: string, projectId: string, project: ArtworkProject, assets: Asset[] }) {
+  const [gridIds, setGridIds] = useState<string[]>([]);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (gridIds.length === 0 && project.sourceAssetIds?.length > 0) {
+      setGridIds(project.sourceAssetIds);
+    }
+  }, [project.sourceAssetIds]);
+
+  const handleDragStart = (idx: number) => setDraggedIdx(idx);
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleDrop = (idx: number) => {
+    if (draggedIdx === null || draggedIdx === idx) return;
+    const newGrid = [...gridIds];
+    const [moved] = newGrid.splice(draggedIdx, 1);
+    newGrid.splice(idx, 0, moved);
+    setGridIds(newGrid);
+    setDraggedIdx(null);
+  };
+
+  const handleSaveOrder = async () => {
+    await projectService.update(brandId, projectId, { sourceAssetIds: gridIds });
+    alert('Grid order saved');
+  };
+
+  const isTriptych = gridIds.length > 0 && gridIds.length % 3 === 0;
+
+  return (
+    <div>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-lg font-semibold">Local Grid Simulator</h2>
+          <p className="text-sm text-gray-500">Preview the Instagram 3-column layout. Drag to reorder (newest top-left).</p>
+        </div>
+        <button onClick={handleSaveOrder} className="px-4 py-2 text-sm bg-black text-white rounded-lg min-h-[44px]">Save Grid Order</button>
+      </div>
+
+      {isTriptych && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+          <strong>Triptych Warning:</strong> For rows to appear left-to-right correctly, you must upload the right tile first, middle second, and left tile last.
+        </div>
+      )}
+
+      {gridIds.length === 0 ? (
+        <p className="text-sm text-gray-400">No source assets attached yet.</p>
+      ) : (
+        <div className="max-w-md mx-auto bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="p-3 border-b border-gray-200 flex items-center justify-center font-semibold text-sm">
+            {project.title} - Grid Preview
+          </div>
+          <div className="grid grid-cols-3 gap-1 p-1 bg-gray-50">
+            {gridIds.map((id, idx) => {
+              const asset = assets.find(a => a.id === id);
+              return (
+                <div 
+                  key={id} 
+                  draggable 
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDrop(idx)}
+                  className="aspect-square bg-gray-200 relative group cursor-grab active:cursor-grabbing hover:opacity-90"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center p-2 text-center break-all text-xs text-gray-600">
+                    {asset?.originalFilename ?? id.slice(0, 6)}
+                  </div>
+                  <div className="absolute top-1 right-1 bg-black/50 text-white text-[10px] px-1.5 rounded-sm">
+                    {idx + 1}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -617,25 +723,8 @@ export default function ProjectCompose() {
           </div>
         )}
 
-        {tab === 'visuals' && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4">Visual Composition</h2>
-            <p className="text-sm text-gray-500 mb-4">Source assets attached to this project</p>
-            {project.sourceAssetIds?.length ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {project.sourceAssetIds.map(assetId => {
-                  const asset = assets.find(a => a.id === assetId);
-                  return (
-                    <div key={assetId} className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                      {asset?.originalFilename ?? assetId.slice(0, 8)}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">No source assets attached yet. Upload assets from the Assets page and attach them here.</p>
-            )}
-          </div>
+        {tab === 'visuals' && brandId && id && project && (
+          <GridSimulator brandId={brandId} projectId={id} project={project} assets={assets} />
         )}
 
         {tab === 'writing' && (
@@ -653,8 +742,8 @@ export default function ProjectCompose() {
           <PublicationsTab brandId={brandId} projectId={id} />
         )}
 
-        {tab === 'launch' && (
-          <LaunchTab project={project} onStatusChange={handleStatusChange} />
+        {tab === 'launch' && brandId && (
+          <LaunchTab brandId={brandId} project={project} onStatusChange={handleStatusChange} />
         )}
 
         {tab === 'funnel' && brandId && id && (

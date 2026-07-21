@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { brandService } from './api.js';
-import { Brand } from '@cronus/domain';
+import { brandService, Brand } from './api.js';
 
 interface BrandContextValue {
   brands: Brand[];

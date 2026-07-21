@@ -170,7 +170,7 @@ export default function Calendar() {
                         )}
                       </div>
                       <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">{unit.caption}</p>
-                      {unit.hashtags?.length > 0 && (
+                      {unit.hashtags && unit.hashtags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {unit.hashtags.slice(0, 4).map((tag: string) => (
                             <span key={tag} className="text-[11px] text-gray-400">#{tag}</span>

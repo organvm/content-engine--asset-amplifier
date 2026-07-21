@@ -1,0 +1,38 @@
+{
+  "project": "Extracted Profile",
+  "account": "Unknown",
+  "title": [],
+  "canonical_url": "",
+  "voice": {
+    "mode": "default",
+    "density": "medium",
+    "promotionality": "low"
+  },
+  "visual_rules": {
+    "grid_role": "seed",
+    "palette": "monochrome",
+    "preferred_format": "carousel"
+  },
+  "caption_forms": [],
+  "audience_hypothesis": {
+    "problem_first": {
+      "question": "What problem?",
+      "hypothesis": ""
+    },
+    "identity_first": {
+      "question": "Who are they?",
+      "hypothesis": ""
+    },
+    "opportunity_first": {
+      "question": "What opportunity?",
+      "hypothesis": ""
+    }
+  },
+  "kpi_architecture": {
+    "attention": [],
+    "engagement_quality": [],
+    "retention": [],
+    "owned_audience": [],
+    "business_impact": []
+  }
+}

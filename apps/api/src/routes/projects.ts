@@ -143,4 +143,45 @@ export const projectRoutes: FastifyPluginAsync = async (app) => {
 
     return mapRows([updated])[0];
   });
+
+  // GET /brands/:brandId/projects/:projectId/manifest
+  app.get('/brands/:brandId/projects/:projectId/manifest', async (request, reply) => {
+    const { brandId, projectId } = request.params as { brandId: string; projectId: string };
+    const db = getDb();
+
+    const [project] = await db.select().from(schema.artworkProjects)
+      .where(and(
+        eq(schema.artworkProjects.id, projectId),
+        eq(schema.artworkProjects.brand_id, brandId),
+      ));
+
+    if (!project) return reply.status(404).send({ error: 'Project not found' });
+
+    const [appRow] = await db.select().from(schema.linkedApplications)
+      .where(eq(schema.linkedApplications.project_id, projectId));
+
+    const variants = await db.select().from(schema.publicationVariants)
+      .where(eq(schema.publicationVariants.project_id, projectId));
+
+    const sourceIds = (project.source_asset_ids as string[]) ?? [];
+
+    const manifest = {
+      id: project.slug || project.id,
+      title: project.hashtag_title || [],
+      seedAsset: project.hero_asset_id || (sourceIds[0] ?? null),
+      participation: appRow?.type || 'two-person-relay',
+      protocols: ['mirror', 'echo', 'drift'],
+      operators: ['repeat', 'self-view', 'role-swap', 'recursive-insertion'],
+      exports: ['1:1', '4:5', '9:16', 'loop', 'lineage-card'],
+      route: appRow?.url || project.canonical_url || '',
+      canonicalEssay: project.canonical_essay || null,
+      variants: variants.map(v => ({
+        platform: v.platform,
+        format: v.format,
+        role: v.editorial_role
+      }))
+    };
+
+    return manifest;
+  });
 };

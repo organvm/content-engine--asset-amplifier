@@ -1,7 +1,10 @@
 import axios from 'axios';
-import { Brand, Asset, ContentUnit, NaturalCenter } from '@cronus/domain';
+import { Brand as DomainBrand, Asset as DomainAsset, ContentUnit as DomainContentUnit, NaturalCenter as DomainNaturalCenter } from '@cronus/domain';
 
-export type { Asset, Brand };
+export type Brand = Omit<DomainBrand, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string };
+export type Asset = Omit<DomainAsset, 'createdAt'> & { createdAt: string };
+export type ContentUnit = Omit<DomainContentUnit, 'createdAt'> & { createdAt: string };
+export type NaturalCenter = Omit<DomainNaturalCenter, 'createdAt'> & { createdAt: string };
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -97,6 +100,8 @@ export const projectService = {
     api.post(`/brands/${brandId}/projects/${id}/assets`, { assetId }).then(r => r.data),
   detachAsset: (brandId: string, id: string, assetId: string) =>
     api.delete(`/brands/${brandId}/projects/${id}/assets/${assetId}`).then(r => r.data),
+  getManifest: (brandId: string, id: string) =>
+    api.get(`/brands/${brandId}/projects/${id}/manifest`).then(r => r.data),
 };
 
 // --- Publication Variants ---

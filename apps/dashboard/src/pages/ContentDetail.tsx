@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { contentService } from '../services/api.js';
+import { contentService, ContentUnit } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
-import { ContentUnit } from '@cronus/domain';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 

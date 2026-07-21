@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { identityService } from '../services/api.js';
+import { identityService, NaturalCenter } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
 import RadarChart from '../components/RadarChart.js';
 
@@ -11,7 +11,7 @@ function confidenceScore(nc: Record<string, unknown>, key: string): number {
 
 export default function Identity() {
   const { brandId } = useBrand();
-  const [nc, setNc] = useState<Record<string, unknown> | null>(null);
+  const [nc, setNc] = useState<NaturalCenter | null>(null);
   const [loading, setLoading] = useState(true);
   const [deriving, setDeriving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,17 +139,17 @@ export default function Identity() {
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{dim.label}</h3>
             {dim.type === 'text' && (
               <p className="text-sm text-gray-800">
-                {typeof dim.raw === 'object' ? JSON.stringify(dim.raw) : dim.raw || 'Not derived'}
+                {typeof dim.raw === 'object' && dim.raw !== null ? JSON.stringify(dim.raw) : (dim.raw as string) || 'Not derived'}
               </p>
             )}
             {dim.type === 'object' && (
               <pre className="text-xs text-gray-700 bg-gray-50 rounded-lg p-3 overflow-x-auto">
-                {typeof dim.raw === 'object' ? JSON.stringify(dim.raw, null, 2) : dim.raw || 'Not derived'}
+                {typeof dim.raw === 'object' && dim.raw !== null ? JSON.stringify(dim.raw, null, 2) : (dim.raw as string) || 'Not derived'}
               </pre>
             )}
             {dim.type === 'pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.raw) ? dim.raw : []).map((item: string, i: number) => (
+                {(Array.isArray(dim.raw) ? dim.raw : []).map((item: unknown, i: number) => (
                   <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.raw || (Array.isArray(dim.raw) && dim.raw.length === 0)) && (
@@ -159,7 +159,7 @@ export default function Identity() {
             )}
             {dim.type === 'negative-pills' && (
               <div className="flex flex-wrap gap-1.5">
-                {(Array.isArray(dim.raw) ? dim.raw : []).map((item: string, i: number) => (
+                {(Array.isArray(dim.raw) ? dim.raw : []).map((item: unknown, i: number) => (
                   <span key={i} className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-full font-medium">{typeof item === 'string' ? item : JSON.stringify(item)}</span>
                 ))}
                 {(!dim.raw || (Array.isArray(dim.raw) && dim.raw.length === 0)) && (
