@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import axios from 'axios';
 import { ingestCommand } from './commands/ingest.js';
+import { manifestCommand } from './commands/manifest.js';
 
 const program = new Command();
 const API_URL = process.env.API_URL || 'http://localhost:3000/api/v1';
@@ -12,7 +13,8 @@ program
   .name('cronus')
   .description('CLI for Managing the Cronus Metabolus Content Engine')
   .version('0.1.0')
-  .addCommand(ingestCommand);
+  .addCommand(ingestCommand)
+  .addCommand(manifestCommand);
 
 program.command('upload')
   .description('Upload an asset for a brand')
@@ -24,9 +26,7 @@ program.command('upload')
       const fileBuffer = await fs.readFile(fullPath);
       const filename = path.basename(fullPath);
 
-      // We'd use form-data here in a real implementation
       console.log(`Uploading ${filename} (${fileBuffer.length} bytes) for brand ${brandId}...`);
-      // const response = await axios.post(`${API_URL}/brands/${brandId}/assets`, ...);
       console.log('Upload successful (Mocked)');
     } catch (err) {
       console.error('Upload failed:', (err as Error).message);

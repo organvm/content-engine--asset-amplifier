@@ -17,12 +17,14 @@ import CheckoutSuccess from './pages/CheckoutSuccess.js';
 import CheckoutCancel from './pages/CheckoutCancel.js';
 import Agencies from './pages/Agencies.js';
 import AgencyDetail from './pages/AgencyDetail.js';
+import PublishPage from './pages/Publish.js';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/assets', label: 'Assets', icon: 'assets' },
   { path: '/projects', label: 'Projects', icon: 'projects' },
   { path: '/review', label: 'Review', icon: 'review' },
+  { path: '/publish', label: 'Publish', icon: 'review' },
   { path: '/calendar', label: 'Calendar', icon: 'calendar' },
   { path: '/settings', label: 'Settings', icon: 'settings' },
 ];
@@ -389,6 +391,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id/compose" element={<ProjectCompose />} />
           <Route path="/review" element={<ReviewQueue />} />
+          <Route path="/publish" element={<PublishPage />} />
           <Route path="/content/:id" element={<ContentDetail />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/identity" element={<Identity />} />
