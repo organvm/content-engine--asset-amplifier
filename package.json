@@ -15,6 +15,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "test": "turbo test",
+    "demo": "tsx infra/scripts/e2e-demo.ts",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean && rm -rf node_modules",

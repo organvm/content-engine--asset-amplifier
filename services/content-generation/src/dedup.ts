@@ -5,17 +5,55 @@ import { createLogger } from '@cronus/logger';
 
 const log = createLogger('content-generation:dedup');
 
+export interface MinimalContentUnit {
+  id: string;
+  platform: string;
+  caption: string;
+  mediaKey: string;
+}
+
 /**
- * Identifies and flags duplicate content units for a brand.
- * 
- * 1. Checks for identical captions on the same platform.
- * 2. Checks for identical media keys (same fragment used for same platform).
- * 3. Marks duplicates as 'flagged' for review.
+ * Pure function to identify duplicate content units from a list.
+ */
+export function findDuplicateContentUnits(units: MinimalContentUnit[]): Array<{ id: string; reason: string }> {
+  const seenCaptions = new Map<string, string>(); // captionKey:unitId
+  const seenMedia = new Map<string, string>(); // mediaKey:unitId
+  const duplicates: Array<{ id: string; reason: string }> = [];
+
+  for (const unit of units) {
+    const captionKey = `${unit.platform}:${unit.caption.slice(0, 100).trim()}`;
+    const mediaKey = `${unit.platform}:${unit.mediaKey}`;
+
+    if (seenCaptions.has(captionKey)) {
+      duplicates.push({
+        id: unit.id,
+        reason: `Duplicate caption found in unit ${seenCaptions.get(captionKey)}`,
+      });
+      continue;
+    }
+
+    if (seenMedia.has(mediaKey)) {
+      duplicates.push({
+        id: unit.id,
+        reason: `Duplicate media key used for ${unit.platform}`,
+      });
+      continue;
+    }
+
+    seenCaptions.set(captionKey, unit.id);
+    seenMedia.set(mediaKey, unit.id);
+  }
+
+  return duplicates;
+}
+
+/**
+ * Identifies and flags duplicate content units for a brand in DB.
  */
 export async function deduplicateContentUnits(brandId: string, contentUnitIds: string[]) {
   const db = getDb();
   
-  const units = await db
+  const rows = await db
     .select()
     .from(schema.contentUnits)
     .where(
@@ -25,29 +63,21 @@ export async function deduplicateContentUnits(brandId: string, contentUnitIds: s
       )
     );
 
-  if (units.length === 0) return;
+  if (rows.length === 0) return;
 
-  log.info({ brandId, count: units.length }, 'Running deduplication');
+  log.info({ brandId, count: rows.length }, 'Running deduplication');
 
-  const seenCaptions = new Map<string, string>(); // caption:unitId
-  const seenMedia = new Map<string, string>(); // mediaKey:unitId
+  const units: MinimalContentUnit[] = rows.map(r => ({
+    id: r.id,
+    platform: r.platform,
+    caption: r.caption,
+    mediaKey: r.media_key,
+  }));
 
-  for (const unit of units) {
-    const captionKey = `${unit.platform}:${unit.caption.slice(0, 100)}`;
-    const mediaKey = `${unit.platform}:${unit.media_key}`;
+  const duplicates = findDuplicateContentUnits(units);
 
-    if (seenCaptions.has(captionKey)) {
-      await flagDuplicate(unit.id, `Duplicate caption found in unit ${seenCaptions.get(captionKey)}`);
-      continue;
-    }
-
-    if (seenMedia.has(mediaKey)) {
-      await flagDuplicate(unit.id, `Duplicate media (same fragment) used for ${unit.platform}`);
-      continue;
-    }
-
-    seenCaptions.set(captionKey, unit.id);
-    seenMedia.set(mediaKey, unit.id);
+  for (const dup of duplicates) {
+    await flagDuplicate(dup.id, dup.reason);
   }
 }
 
