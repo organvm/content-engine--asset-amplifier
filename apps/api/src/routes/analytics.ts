@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { getDb, schema, toCamel, mapRows } from '@cronus/db';
+import { getDb, schema, mapRows } from '@cronus/db';
 import { eq, sql, desc } from '@cronus/db';
 import { generateWeeklyReport, computeAssetAttribution } from '@cronus/analytics';
 
@@ -10,7 +10,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
     const { week_of } = request.query as { week_of?: string };
 
     const report = await generateWeeklyReport(brandId, week_of ? new Date(week_of) : new Date());
-    return toCamel(report);
+    return report;
   });
 
   // GET /brands/:brandId/assets/:assetId/attribution
@@ -18,7 +18,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
     const { assetId } = request.params as { assetId: string };
     
     const attribution = await computeAssetAttribution(assetId);
-    return toCamel(attribution);
+    return attribution;
   });
 
   // GET /brands/:brandId/roi

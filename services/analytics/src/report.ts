@@ -5,10 +5,53 @@ import { computeAssetAttribution } from './attribution.js';
 
 const log = createLogger('analytics:report');
 
+export interface WeeklyReportSummary {
+  brandId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  totalPostsPublished: number;
+  totalViews: number;
+  totalEngagement: number;
+  engagementRate: number;
+  assetAttributions: Array<{
+    assetId: string;
+    originalFilename?: string;
+    totalViews: number;
+    totalEngagement: number;
+  }>;
+}
+
+/**
+ * Pure helper for computing weekly report summary objects.
+ */
+export function computeWeeklyReportSummary(params: {
+  brandId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  postsPublished: number;
+  totalViews: number;
+  totalEngagement: number;
+  assetAttributions: Array<{ assetId: string; originalFilename?: string; totalViews: number; totalEngagement: number }>;
+}): WeeklyReportSummary {
+  const { brandId, weekStart, weekEnd, postsPublished, totalViews, totalEngagement, assetAttributions } = params;
+  const engagementRate = totalViews > 0 ? totalEngagement / totalViews : 0;
+
+  return {
+    brandId,
+    weekStart,
+    weekEnd,
+    totalPostsPublished: postsPublished,
+    totalViews,
+    totalEngagement,
+    engagementRate,
+    assetAttributions,
+  };
+}
+
 /**
  * Generates a weekly performance report for a brand.
  */
-export async function generateWeeklyReport(brandId: string, weekOf: Date) {
+export async function generateWeeklyReport(brandId: string, weekOf: Date): Promise<WeeklyReportSummary> {
   const db = getDb();
 
   // 1. Calculate week boundaries
@@ -63,14 +106,13 @@ export async function generateWeeklyReport(brandId: string, weekOf: Date) {
     }
   }
 
-  return {
+  return computeWeeklyReportSummary({
     brandId,
     weekStart,
     weekEnd,
-    totalPostsPublished: Number(totals?.posts_published || 0),
+    postsPublished: Number(totals?.posts_published || 0),
     totalViews: Number(totals?.total_views || 0),
     totalEngagement: Number(totals?.total_engagement || 0),
-    engagementRate: totals?.total_views ? Number(totals.total_engagement) / Number(totals.total_views) : 0,
     assetAttributions,
-  };
+  });
 }
