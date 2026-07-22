@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -104,6 +105,7 @@ describe.runIf(runIntegration)('E2E Pipeline', () => {
       id: publishEventId,
       content_unit_id: contentUnitId,
       platform_connection_id: connectionId,
+      scheduled_at: new Date(),
       status: 'pending',
     });
 
@@ -120,7 +122,3 @@ describe.runIf(runIntegration)('E2E Pipeline', () => {
     await db.delete(schema.brands).where(eq(schema.brands.id, brandId));
   });
 });
-
-function eq(col: unknown, val: unknown) {
-  return { column: col, value: val } as never;
-}

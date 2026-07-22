@@ -62,7 +62,12 @@ jobs:
         
       - name: Unit tests
         run: pnpm run test
-        
+
+      - name: Run DB migrations
+        env:
+          DATABASE_URL: postgres://cronus:cronus_test@localhost:5432/cronus_test
+        run: pnpm run db:migrate
+
       - name: E2E integration test
         env:
           DATABASE_URL: postgres://cronus:cronus_test@localhost:5432/cronus_test
