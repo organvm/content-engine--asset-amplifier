@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { getDb, schema } from '@cronus/db';
+import { getDb, schema, mapRows } from '@cronus/db';
 import { eq, and, desc } from '@cronus/db';
 import { ingestAsset } from '@cronus/asset-ingestion';
 import { createLogger } from '@cronus/logger';
@@ -56,11 +56,13 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
     const { brandId } = request.params as { brandId: string };
     const db = getDb();
 
-    return db
+    const rows = await db
       .select()
       .from(schema.assets)
       .where(eq(schema.assets.brand_id, brandId))
       .orderBy(desc(schema.assets.created_at));
+
+    return mapRows(rows);
   });
 
   // GET /brands/:brandId/assets/:assetId
@@ -69,7 +71,7 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
     const { brandId, assetId } = request.params as { brandId: string; assetId: string };
     const db = getDb();
 
-    const [asset] = await db
+    const rows = await db
       .select()
       .from(schema.assets)
       .where(
@@ -78,6 +80,8 @@ export const assetRoutes: FastifyPluginAsync = async (app) => {
           eq(schema.assets.brand_id, brandId)
         )
       );
+
+    const [asset] = mapRows(rows);
 
     if (!asset) {
       return reply.status(404).send({ error: 'Asset not found' });

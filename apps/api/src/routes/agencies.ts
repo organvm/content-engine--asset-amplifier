@@ -8,16 +8,31 @@ function slugify(name: string): string {
 }
 
 export const agencyRoutes: FastifyPluginAsync = async (app) => {
+  // GET /agencies — list all agencies
+  app.get('/agencies', async () => {
+    const db = getDb();
+    return mapRows(await db.select().from(schema.agencies));
+  });
+
   app.post('/agencies', async (request, reply) => {
-    const body = request.body as { name: string; contact_email: string; logo_url?: string; primary_color?: string };
+    const body = request.body as Record<string, unknown>;
     const db = getDb();
 
+    const name = body.name as string;
+    const contactEmail = (body.contactEmail ?? body.contact_email) as string;
+    const logoUrl = (body.logoUrl ?? body.logo_url) as string | undefined;
+    const primaryColor = (body.primaryColor ?? body.primary_color) as string | undefined;
+
+    if (!name || !contactEmail) {
+      return reply.status(400).send({ error: 'name and contactEmail are required' });
+    }
+
     const [agency] = await db.insert(schema.agencies).values({
-      name: body.name,
-      slug: slugify(body.name) + '-' + randomUUID().slice(0, 6),
-      contact_email: body.contact_email,
-      logo_url: body.logo_url ?? null,
-      primary_color: body.primary_color ?? null,
+      name,
+      slug: slugify(name) + '-' + randomUUID().slice(0, 6),
+      contact_email: contactEmail,
+      logo_url: logoUrl ?? null,
+      primary_color: primaryColor ?? null,
     }).returning();
 
     reply.status(201).send(toCamel(agency));

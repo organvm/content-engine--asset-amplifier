@@ -1,0 +1,50 @@
+name: Deploy API (Cloudflare Workers)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'services/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.CF_API_TOKEN }}" ]; then
+            echo "::error::CF_API_TOKEN secret is not configured"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+            echo "::error::CF_ACCOUNT_ID secret is not configured"
+            exit 1
+          fi
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: 'apps/api'

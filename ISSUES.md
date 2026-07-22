@@ -29,17 +29,17 @@
 - **Identity Inquiries** system operational for autopoietic brand refinement.
 
 ## ⏺ Needs To Be (The Horizon)
-- [ ] **IRF-APP-054**: Implement Instagram/Facebook Graph API OAuth flow.
-- [ ] **IRF-APP-055**: Implement TikTok Content Publishing API adapter.
-- [ ] **IRF-APP-056**: Build "Asset ROI" dashboard visualization (Attribution metrics).
-- [ ] **IRF-APP-057**: Build "Identity Mirror" radar chart for Natural Center confidence.
-- [ ] **IRF-APP-058**: Implement actual publishing calls in adapters (replace stubs).
-- [ ] **IRF-APP-059**: Create GitHub Actions CI/CD workflow (completes `seed.yaml` vacuum).
-- [ ] **IRF-APP-060**: Production environment configuration (Vercel/Railway).
+- [x] **IRF-APP-054**: Implement Instagram/Facebook Graph API OAuth flow.
+- [x] **IRF-APP-055**: Implement TikTok Content Publishing API adapter.
+- [x] **IRF-APP-056**: Build "Asset ROI" dashboard visualization (Attribution metrics).
+- [x] **IRF-APP-057**: Build "Identity Mirror" radar chart for Natural Center confidence.
+- [x] **IRF-APP-058**: Implement actual publishing calls in adapters (replace stubs).
+- [x] **IRF-APP-059**: Create GitHub Actions CI/CD workflow (completes `seed.yaml` vacuum).
+- [x] **IRF-APP-060**: Production environment configuration (Vercel/Railway).
 
 ---
 
 ## Technical Debt / Risks
-- **Video Re-encoding**: FFmpeg padding/cropping for mismatched aspect ratios is currently a stub in `formatter.ts`.
-- **Transcription Accuracy**: Whisper sentence-splitting is basic; needs better hook identification.
+- [x] **Video Re-encoding**: FFmpeg padding/cropping for mismatched aspect ratios is currently a stub in `formatter.ts`. (Resolved: Now correctly uses `crop` to fill screen)
+- [x] **Transcription Accuracy**: Whisper sentence-splitting is basic; needs better hook identification. (Resolved: Upgraded to `Intl.Segmenter`)
 - **Rate Limiting**: Platform adapters check for rate limits but don't yet implement robust throttling.

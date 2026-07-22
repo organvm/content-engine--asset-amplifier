@@ -16,6 +16,11 @@ import { resizeRoutes } from './routes/resize.js';
 import { authPlugin } from './plugins/auth.js';
 import { settingsRoutes } from './routes/settings.js';
 import { billingRoutes } from './routes/billing.js';
+import { projectRoutes } from './routes/projects.js';
+import { publicationVariantRoutes } from './routes/publication-variants.js';
+import { linkedApplicationRoutes } from './routes/linked-applications.js';
+import { conversionEventRoutes } from './routes/conversion-events.js';
+import { videoRoutes } from './routes/video.js';
 
 const log = createLogger('api');
 
@@ -56,6 +61,11 @@ export async function buildApp() {
   await app.register(resizeRoutes, { prefix: '/api/v1' });
   await app.register(settingsRoutes, { prefix: '/api/v1' });
   await app.register(billingRoutes, { prefix: '/api/v1' });
+  await app.register(projectRoutes, { prefix: '/api/v1' });
+  await app.register(publicationVariantRoutes, { prefix: '/api/v1' });
+  await app.register(linkedApplicationRoutes, { prefix: '/api/v1' });
+  await app.register(conversionEventRoutes, { prefix: '/api/v1' });
+  await app.register(videoRoutes, { prefix: '/api/v1' });
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -84,7 +94,8 @@ async function start() {
 const isDirectRun = process.argv[1]?.endsWith('server.ts') || process.argv[1]?.endsWith('server.js');
 if (isDirectRun) {
   start().catch((err) => {
-    console.error('Failed to start API:', err);
+    const log = createLogger('api');
+    log.error({ err }, 'Failed to start API');
     process.exit(1);
   });
 }

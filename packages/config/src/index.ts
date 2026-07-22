@@ -28,6 +28,8 @@ const envSchema = z.object({
   // Platform OAuth
   LINKEDIN_CLIENT_ID: z.string().optional(),
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
+  INSTAGRAM_CLIENT_ID: z.string().optional(),
+  INSTAGRAM_CLIENT_SECRET: z.string().optional(),
 
   // Security
   ENCRYPTION_KEY: z.string().optional(),

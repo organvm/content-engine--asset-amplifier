@@ -1,0 +1,31 @@
+{
+  "name": "temporal-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "start": "tsx src/worker.ts",
+    "build": "echo 'temporal-worker: no build needed (runs via tsx)'",
+    "clean": "rm -rf dist",
+    "lint": "echo 'temporal-worker: no lint config yet'",
+    "typecheck": "echo 'temporal-worker: typecheck skipped (tsx resolves modules at runtime)'"
+  },
+  "dependencies": {
+    "@temporalio/activity": "^1.11.0",
+    "@temporalio/client": "^1.11.0",
+    "@temporalio/worker": "^1.11.0",
+    "@temporalio/workflow": "^1.11.0",
+    "@cronus/config": "workspace:*",
+    "@cronus/db": "workspace:*",
+    "@cronus/domain": "workspace:*",
+    "@cronus/fragment-extraction": "workspace:*",
+    "@cronus/logger": "workspace:*",
+    "@cronus/scoring": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "tsx": "4.23.0",
+    "@types/node": "^26.1.1"
+  }
+}

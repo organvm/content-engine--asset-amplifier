@@ -5,10 +5,22 @@ import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+interface Asset {
+  id: string;
+}
+
+interface ContentUnit {
+  id: string;
+  approvalStatus: string;
+  platform: string;
+  mediaKey?: string;
+  caption: string;
+}
+
 export default function Dashboard() {
   const { selectedBrand, brandId } = useBrand();
-  const [assets, setAssets] = useState<any[]>([]);
-  const [content, setContent] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [content, setContent] = useState<ContentUnit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,9 +36,9 @@ export default function Dashboard() {
 
   if (loading) return <div className="animate-pulse text-gray-400 p-4">Loading dashboard...</div>;
 
-  const pending = content.filter((u: any) => u.approvalStatus === 'pending');
-  const approved = content.filter((u: any) => u.approvalStatus === 'approved');
-  const platforms = [...new Set(content.map((u: any) => u.platform))];
+  const pending = content.filter((u: ContentUnit) => u.approvalStatus === 'pending');
+  const approved = content.filter((u: ContentUnit) => u.approvalStatus === 'approved');
+  const platforms = [...new Set(content.map((u: ContentUnit) => u.platform))];
 
   return (
     <div className="space-y-6">
@@ -61,7 +73,7 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Content by Platform</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {platforms.map(platform => {
-              const count = content.filter((u: any) => u.platform === platform).length;
+              const count = content.filter((u: ContentUnit) => u.platform === platform).length;
               return (
                 <div key={platform} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-700 capitalize">{platform.replace('_', ' ')}</span>
@@ -81,7 +93,7 @@ export default function Dashboard() {
             <Link to="/review" className="text-sm text-blue-600 font-medium">View All →</Link>
           </div>
           <div className="space-y-3">
-            {content.slice(0, 5).map((unit: any) => (
+            {content.slice(0, 5).map((unit: ContentUnit) => (
               <div key={unit.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 {unit.mediaKey && (
                   <img

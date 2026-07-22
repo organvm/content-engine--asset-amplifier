@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { analyticsService, AssetRoi } from '../services/api.js';
 import { useBrand } from '../services/BrandContext.js';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -151,6 +152,23 @@ export default function AssetRoiPage() {
         <div className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 md:p-12 text-center">
           <p className="text-gray-500 text-base mb-2">No ROI data yet.</p>
           <p className="text-xs text-gray-400">Upload assets and publish content to see performance metrics.</p>
+        </div>
+      )}
+      {/* Bar chart: Content output by asset */}
+      {assets.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <h3 className="font-semibold text-gray-800 mb-4">Content Output by Asset</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={sorted.slice(0, 8).map(a => ({ name: a.assetName.slice(0, 20), generated: a.contentCount, approved: a.approvedCount }))}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="generated" fill="#6366f1" name="Generated" />
+              <Bar dataKey="approved" fill="#22c55e" name="Approved" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
     </div>

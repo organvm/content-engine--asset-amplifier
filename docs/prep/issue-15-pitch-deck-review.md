@@ -394,6 +394,13 @@ All three decks use Reveal.js with a consistent glassmorphism design system (dar
 
 ---
 
+## 11. Appendix: ChatGPT Brainstorm Data
+
+The complete ChatGPT brainstorm text (including exact copy, design tokens, and slide master content matrix) has been recovered and is now available in the repository root at `ChatGPT-Pitch Deck Narrative.md`. Please refer to this file for the raw generated copy and structure when finalizing the decks.
+
+---
+
 **Document prepared:** 2026-07-20
 **Next review:** After Scott's feedback
 **Owner:** Scott Lefler (design/marketing) + Anthony Padavano (engineering)
+

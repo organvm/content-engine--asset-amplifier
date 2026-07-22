@@ -9,6 +9,7 @@
     "test": "vitest run --passWithNoTests",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
     "clean": "rm -rf dist"
   },
   "dependencies": {

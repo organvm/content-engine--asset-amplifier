@@ -1,0 +1,22 @@
+{
+  "name": "@cronus/webhook-dispatcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cronus/db": "workspace:*",
+    "@cronus/domain": "workspace:*",
+    "@cronus/logger": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
+}

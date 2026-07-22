@@ -5,8 +5,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type Stripe from 'stripe';
-import { getDb, schema, toCamel, mapRows, eq, desc } from '@cronus/db';
+import { getDb, schema, toCamel, mapRows, eq, and, desc, inArray } from '@cronus/db';
 import { resolveProviders } from '@cronus/config';
+import { createLogger } from '@cronus/logger';
+import { TIERS, getStatusConfig, createCheckoutSession, retrieveSession, getStripe, handleWebhookEvent } from './billing-handler.js';
 
 type Bindings = {
   ASSETS_BUCKET: R2Bucket;
@@ -28,6 +30,7 @@ type Bindings = {
   [key: string]: unknown;
 };
 
+const log = createLogger('worker');
 const app = new Hono<{ Bindings: Bindings }>();
 
 // Inject env vars from Worker bindings into process.env
@@ -45,9 +48,43 @@ app.use('*', cors());
 // ── Health ────────────────────────────────────────────────────
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// ── Agencies ──────────────────────────────────────────────────
+app.get('/api/v1/agencies', async (c) => {
+  const db = getDb();
+  return c.json(mapRows(await db.select().from(schema.agencies)));
+});
+
+app.post('/api/v1/agencies', async (c) => {
+  const body = await c.req.json();
+  const db = getDb();
+  const [agency] = await db.insert(schema.agencies).values({
+    name: body.name,
+    slug: body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + crypto.randomUUID().slice(0, 6),
+    contact_email: body.contact_email ?? '',
+  }).returning();
+  return c.json(toCamel(agency), 201);
+});
+
+app.get('/api/v1/agencies/:id', async (c) => {
+  const db = getDb();
+  const [agency] = await db.select().from(schema.agencies).where(eq(schema.agencies.id, c.req.param('id')));
+  if (!agency) return c.json({ error: 'Agency not found' }, 404);
+  return c.json(toCamel(agency));
+});
+
+app.get('/api/v1/agencies/:id/brands', async (c) => {
+  const db = getDb();
+  const rows = await db.select().from(schema.brands).where(eq(schema.brands.agency_id, c.req.param('id')));
+  return c.json(mapRows(rows));
+});
+
 // ── Brands CRUD ───────────────────────────────────────────────
 app.get('/api/v1/brands', async (c) => {
   const db = getDb();
+  const agencyId = c.req.query('agency_id');
+  if (agencyId) {
+    return c.json(mapRows(await db.select().from(schema.brands).where(eq(schema.brands.agency_id, agencyId))));
+  }
   return c.json(mapRows(await db.select().from(schema.brands)));
 });
 
@@ -71,6 +108,18 @@ app.post('/api/v1/brands', async (c) => {
     agency_id: body.agency_id ?? null,
   }).returning();
   return c.json(toCamel(brand), 201);
+});
+
+app.patch('/api/v1/brands/:id', async (c) => {
+  const body = await c.req.json();
+  const db = getDb();
+  const allowed: Record<string, unknown> = {};
+  for (const key of ['name', 'description', 'tone_description', 'consistency_threshold', 'agency_id']) {
+    if (body[key] !== undefined) allowed[key] = body[key];
+  }
+  const [brand] = await db.update(schema.brands).set(allowed).where(eq(schema.brands.id, c.req.param('id'))).returning();
+  if (!brand) return c.json({ error: 'Brand not found' }, 404);
+  return c.json(toCamel(brand));
 });
 
 // ── Asset Upload (R2) + Auto-Generation ───────────────────────
@@ -174,7 +223,7 @@ Return ONLY valid JSON, no markdown: {"caption": "your full caption here", "hash
         });
       }
     } catch (err) {
-      console.error('Auto-generation failed:', err);
+      log.error({ err }, 'Auto-generation failed');
     }
   }
 
@@ -224,10 +273,111 @@ app.get('/files/:key{.+}', async (c) => {
 // ── Content ───────────────────────────────────────────────────
 app.get('/api/v1/brands/:brandId/content', async (c) => {
   const db = getDb();
+  const brandId = c.req.param('brandId');
+  const statusFilter = c.req.query('approval_status');
+  const platformFilter = c.req.query('platform');
+
+  const conditions = [eq(schema.contentUnits.brand_id, brandId)];
+  if (statusFilter) conditions.push(eq(schema.contentUnits.approval_status, statusFilter));
+  if (platformFilter) conditions.push(eq(schema.contentUnits.platform, platformFilter));
+
   const rows = await db.select().from(schema.contentUnits)
-    .where(eq(schema.contentUnits.brand_id, c.req.param('brandId')))
+    .where(and(...conditions))
     .orderBy(desc(schema.contentUnits.created_at));
   return c.json(mapRows(rows));
+});
+
+app.get('/api/v1/brands/:brandId/content/:contentUnitId', async (c) => {
+  const db = getDb();
+  const [unit] = await db.select().from(schema.contentUnits)
+    .where(eq(schema.contentUnits.id, c.req.param('contentUnitId')));
+  if (!unit) return c.json({ error: 'Content unit not found' }, 404);
+  return c.json(toCamel(unit));
+});
+
+app.post('/api/v1/brands/:brandId/generate', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+  const body = await c.req.json();
+  const assetId = body.assetId as string;
+
+  const [brand] = await db.select().from(schema.brands).where(eq(schema.brands.id, brandId));
+  if (!brand) return c.json({ error: 'Brand not found' }, 404);
+
+  const [asset] = await db.select().from(schema.assets).where(eq(schema.assets.id, assetId));
+  if (!asset) return c.json({ error: 'Asset not found' }, 404);
+
+  // Validate we have an LLM provider
+  const { llm } = await resolveProviders();
+  if (!llm) return c.json({ error: 'No LLM provider configured' }, 503);
+
+  // Find or create a fragment for this asset
+  let fragments = await db.select().from(schema.fragments)
+    .where(eq(schema.fragments.asset_id, assetId));
+  if (fragments.length === 0) {
+    const fragmentId = crypto.randomUUID();
+    await db.insert(schema.fragments).values({
+      id: fragmentId,
+      asset_id: assetId,
+      type: asset.media_type === 'video' ? 'clip' : 'crop',
+      storage_key: asset.storage_key,
+      quality_score: 1.0,
+      extraction_metadata: { source: 'generate-endpoint' },
+    });
+    fragments = [{ id: fragmentId, asset_id: assetId, type: 'crop', storage_key: asset.storage_key, quality_score: 1, extraction_metadata: null }] as unknown as typeof fragments;
+  }
+
+  const fragmentId = fragments[0].id;
+  const platforms: string[] = body.platforms ?? ['instagram_feed', 'linkedin', 'x', 'tiktok', 'instagram_reels'];
+  const toneDesc = brand.tone_description ?? 'Professional and engaging';
+  const brandDesc = brand.description ?? '';
+
+  const platformGuide: Record<string, string> = {
+    instagram_feed: 'Instagram Feed: visual-first, 3-5 hashtags, engaging but not cluttered, lifestyle tone',
+    instagram_reels: 'Instagram Reels: hook in first line, high energy, 5-8 hashtags, trending feel',
+    linkedin: 'LinkedIn: professional thought-leadership, value-add insight, 2-3 broad hashtags, structured with line breaks',
+    x: 'X/Twitter: concise and punchy, max 280 chars, conversational, 1-2 hashtags max',
+    tiktok: 'TikTok: informal, relatable, strong hook, trend-aware, minimal corporate speak',
+  };
+
+  const unitIds: string[] = [];
+
+  for (const platform of platforms) {
+    const prompt = `You are a social media expert for "${brand.name}"${brandDesc ? ` — ${brandDesc}` : ''}.
+Brand voice: ${toneDesc}.
+Platform: ${platformGuide[platform] || platform}.
+Asset being promoted: "${asset.original_filename ?? 'content'}" (${asset.media_type}).
+
+Write a high-performing native post for this platform. Be specific, not generic.
+Return ONLY valid JSON, no markdown: {"caption": "your full caption here", "hashtags": ["relevant", "tags"]}`;
+
+    const response = await llm.generate(prompt, { maxTokens: 256 });
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) continue;
+
+    let parsed;
+    try { parsed = JSON.parse(jsonMatch[0]); } catch { continue; }
+
+    const unitId = crypto.randomUUID();
+    unitIds.push(unitId);
+
+    await db.insert(schema.contentUnits).values({
+      id: unitId,
+      fragment_id: fragmentId,
+      brand_id: brandId,
+      platform,
+      caption: parsed.caption ?? '',
+      media_key: asset.storage_key,
+      media_type: asset.media_type,
+      hashtags: parsed.hashtags ?? [],
+      nc_score: 0,
+      nc_score_breakdown: {},
+      approval_status: 'pending',
+      similarity_hash: crypto.randomUUID(),
+    });
+  }
+
+  return c.json({ generated: unitIds.length, unitIds }, 201);
 });
 
 app.post('/api/v1/brands/:brandId/content/:unitId/approve', async (c) => {
@@ -256,12 +406,70 @@ app.get('/api/v1/brands/:brandId/natural-center', async (c) => {
   return c.json(toCamel(nc));
 });
 
+app.post('/api/v1/brands/:brandId/natural-center', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+  const body = await c.req.json();
+  const [nc] = await db.insert(schema.naturalCenters).values({
+    brand_id: brandId,
+    version: 1,
+    thematic_core: body.thematic_core ?? {},
+    aesthetic_signature: body.aesthetic_signature ?? {},
+    tonal_vector: body.tonal_vector ?? {},
+    narrative_bias: body.narrative_bias ?? {},
+    symbolic_markers: body.symbolic_markers ?? {},
+    negative_space: body.negative_space ?? {},
+    brand_embedding: body.brand_embedding ?? [],
+    confidence_scores: body.confidence_scores ?? {},
+    overall_confidence: body.overall_confidence ?? 0,
+    source_asset_ids: body.source_asset_ids ?? [],
+    system_prompt: body.system_prompt ?? '',
+    inquiries: body.inquiries ?? [],
+  }).returning();
+  return c.json(toCamel(nc), 201);
+});
+
+app.patch('/api/v1/brands/:brandId/natural-center', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+  const body = await c.req.json();
+  const existing = await db.select().from(schema.naturalCenters)
+    .where(eq(schema.naturalCenters.brand_id, brandId));
+  if (existing.length === 0) return c.json({ error: 'No identity profile' }, 404);
+
+  const current = existing[0] as Record<string, unknown>;
+  const update: Record<string, unknown> = { version: (current.version as number) + 1 };
+  const jsonbKeys = ['thematic_core', 'aesthetic_signature', 'tonal_vector', 'narrative_bias', 'symbolic_markers', 'negative_space'];
+  for (const key of jsonbKeys) {
+    if (body[key]) {
+      const currentVal = (current[key] ?? {}) as Record<string, unknown>;
+      update[key] = { ...currentVal, ...body[key] };
+    }
+  }
+  if (body.source_asset_ids) update.source_asset_ids = body.source_asset_ids;
+  if (body.system_prompt) update.system_prompt = body.system_prompt;
+  if (body.inquiries) update.inquiries = body.inquiries;
+
+  const [nc] = await db.update(schema.naturalCenters)
+    .set(update)
+    .where(eq(schema.naturalCenters.brand_id, brandId))
+    .returning();
+  return c.json(toCamel(nc));
+});
+
 // ── Fragments ─────────────────────────────────────────────────
 app.get('/api/v1/brands/:brandId/assets/:assetId/fragments', async (c) => {
   const db = getDb();
   const rows = await db.select().from(schema.fragments)
     .where(eq(schema.fragments.asset_id, c.req.param('assetId')));
   return c.json(mapRows(rows));
+});
+
+// ── Jobs ─────────────────────────────────────────────────────
+app.get('/api/v1/jobs/:jobId', async (c) => {
+  // BullMQ queue lookups require a persistent Redis connection.
+  // For edge polling, return a redirect to the Fastify server instead.
+  return c.json({ error: 'Job lookup requires Node.js — use the API server directly' }, 501);
 });
 
 // ── Settings & Providers ──────────────────────────────────────
@@ -310,86 +518,37 @@ app.put('/api/v1/settings/keys', async (c) => {
 });
 
 // ── Billing ──────────────────────────────────────────────────
-app.get('/api/v1/billing/status', (c) => {
-  const env = process.env;
-  const hasKey = !!env.STRIPE_SECRET_KEY;
-  const hasWebhookSecret = !!env.STRIPE_WEBHOOK_SECRET;
-  const hasCreatorPrice = !!env.STRIPE_PRICE_ID_CREATOR;
-  const hasStudioPrice = !!env.STRIPE_PRICE_ID_STUDIO;
-  return c.json({
-    configured: hasKey && hasWebhookSecret && hasCreatorPrice && hasStudioPrice,
-    stripe_key: hasKey,
-    webhook_secret: hasWebhookSecret,
-    price_creator: hasCreatorPrice,
-    price_studio: hasStudioPrice,
-  });
-});
+app.get('/api/v1/billing/status', (c) => c.json(getStatusConfig()));
 
 app.post('/api/v1/billing/checkout', async (c) => {
-  const { default: Stripe } = await import('stripe');
   const body = await c.req.json();
-  const tier = body.tier;
-  const email = body.email;
-
-  const validTiers = ['creator', 'studio'];
-  if (!validTiers.includes(tier)) {
-    return c.json({ error: `Invalid tier. Must be one of: ${validTiers.join(', ')}` }, 400);
+  const { tier, email, brand_id } = body;
+  if (!TIERS.includes(tier)) {
+    return c.json({ error: `Invalid tier. Must be one of: ${TIERS.join(', ')}` }, 400);
   }
-
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return c.json({ error: 'STRIPE_SECRET_KEY not configured' }, 500);
-
-  const stripe = new Stripe(key);
-  const priceMap: Record<string, string | undefined> = {
-    creator: process.env.STRIPE_PRICE_ID_CREATOR,
-    studio: process.env.STRIPE_PRICE_ID_STUDIO,
-  };
-  const priceId = priceMap[tier];
-  if (!priceId) return c.json({ error: `Price ID not configured for tier: ${tier}` }, 500);
-
-  const dashboardUrl = process.env.DASHBOARD_URL || 'http://localhost:5173';
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: priceId, quantity: 1 }],
-    ...(email && { customer_email: email }),
-    success_url: `${dashboardUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${dashboardUrl}/billing/cancel`,
-    metadata: { tier },
-  });
-
-  return c.json({ sessionId: session.id, url: session.url });
+  try {
+    const result = await createCheckoutSession(tier, email, brand_id);
+    return c.json(result);
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 500);
+  }
 });
 
 app.get('/api/v1/billing/session/:sessionId', async (c) => {
-  const { default: Stripe } = await import('stripe');
-  const sessionId = c.req.param('sessionId');
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return c.json({ error: 'STRIPE_SECRET_KEY not configured' }, 500);
-
-  const stripe = new Stripe(key);
-  const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ['subscription', 'customer'],
-  });
-
-  return c.json({
-    id: session.id,
-    status: session.status,
-    customerEmail: session.customer_details?.email,
-    tier: session.metadata?.tier,
-    subscriptionId: typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id,
-  });
+  try {
+    const result = await retrieveSession(c.req.param('sessionId'));
+    return c.json(result);
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 500);
+  }
 });
 
 app.post('/api/v1/billing/webhook', async (c) => {
-  const { default: Stripe } = await import('stripe');
   const key = process.env.STRIPE_SECRET_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!key || !webhookSecret) return c.json({ error: 'Stripe not configured' }, 500);
 
-  const stripe = new Stripe(key);
+  const stripe = getStripe();
   const signature = c.req.header('stripe-signature');
   if (!signature) return c.json({ error: 'Missing stripe-signature header' }, 400);
 
@@ -401,12 +560,128 @@ app.post('/api/v1/billing/webhook', async (c) => {
     return c.json({ error: `Webhook verification failed: ${(err as Error).message}` }, 400);
   }
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    console.log('Checkout completed:', { tier: session.metadata?.tier, email: session.customer_details?.email });
-  }
-
+  await handleWebhookEvent(event, log);
   return c.json({ received: true });
+});
+
+// ── Asset ROI ─────────────────────────────────────────────────
+app.get('/api/v1/brands/:brandId/roi', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+
+  // Get all assets for brand
+  const assets = await db.select().from(schema.assets)
+    .where(eq(schema.assets.brand_id, brandId));
+
+  const roi = await Promise.all(assets.map(async (asset) => {
+    // Get content units for this asset's fragments
+    const fragments = await db.select({ id: schema.fragments.id })
+      .from(schema.fragments)
+      .where(eq(schema.fragments.asset_id, asset.id));
+
+    const fragmentIds = fragments.map(f => f.id);
+
+    let contentCount = 0, approvedCount = 0;
+    const platformSet = new Set<string>();
+    let totalViews = 0, totalEngagement = 0;
+
+    if (fragmentIds.length > 0) {
+      const units = await db.select().from(schema.contentUnits)
+        .where(inArray(schema.contentUnits.fragment_id, fragmentIds));
+
+      contentCount = units.length;
+      approvedCount = units.filter(u => u.approval_status === 'approved').length;
+      units.forEach(u => { if (u.platform) platformSet.add(u.platform); });
+
+      // Performance observations
+      const unitIds = units.map(u => u.id);
+      if (unitIds.length > 0) {
+        const publishEvents = await db.select({ id: schema.publishEvents.id })
+          .from(schema.publishEvents)
+          .where(inArray(schema.publishEvents.content_unit_id, unitIds));
+
+        if (publishEvents.length > 0) {
+          const obs = await db.select().from(schema.performanceObservations)
+            .where(inArray(schema.performanceObservations.publish_event_id, publishEvents.map(e => e.id)));
+          totalViews = obs.reduce((s, o) => s + (o.views ?? 0), 0);
+          totalEngagement = obs.reduce((s, o) => s + (o.likes ?? 0) + (o.comments ?? 0) + (o.shares ?? 0), 0);
+        }
+      }
+    }
+
+    return {
+      assetId: asset.id,
+      assetName: asset.original_filename,
+      mediaType: asset.media_type,
+      createdAt: asset.created_at,
+      contentCount,
+      approvedCount,
+      platformCount: platformSet.size,
+      totalViews,
+      totalEngagement,
+    };
+  }));
+
+  return c.json(roi);
+});
+
+// ── Natural Center Inquiries ───────────────────────────────────
+app.post('/api/v1/brands/:brandId/natural-center/inquiries/:inquiryId/answer', async (c) => {
+  const db = getDb();
+  const brandId = c.req.param('brandId');
+  const inquiryId = c.req.param('inquiryId');
+  const body = await c.req.json();
+  const answer = body.answer as string;
+
+  const [nc] = await db.select().from(schema.naturalCenters)
+    .where(eq(schema.naturalCenters.brand_id, brandId));
+
+  if (!nc) return c.json({ error: 'No identity profile found' }, 404);
+
+  // Update inquiry in JSONB array
+  const inquiries = (nc.inquiries as Array<Record<string, unknown>>) || [];
+  const updated = inquiries.map(inq =>
+    inq.id === inquiryId ? { ...inq, answer, status: 'answered' } : inq
+  );
+
+  await db.update(schema.naturalCenters)
+    .set({ inquiries: updated })
+    .where(eq(schema.naturalCenters.brand_id, brandId));
+
+  return c.json({ status: 'answered', inquiryId });
+});
+
+// ── Video Render ─────────────────────────────────────────────
+app.post('/api/v1/brands/:brandId/render-video', async (c) => {
+  const brandId = c.req.param('brandId');
+  const body = await c.req.json();
+  const { asset_id, headline: _headline, watermark: _watermark } = body;
+
+  const db = getDb();
+  const [asset] = await db
+    .select()
+    .from(schema.assets)
+    .where(and(eq(schema.assets.id, asset_id), eq(schema.assets.brand_id, brandId)));
+
+  if (!asset) return c.json({ error: 'Asset not found' }, 404);
+
+  const [fragment] = await db
+    .select()
+    .from(schema.fragments)
+    .where(eq(schema.fragments.asset_id, asset_id));
+
+  if (!fragment) return c.json({ error: 'No fragments found for asset' }, 404);
+
+  await db
+    .update(schema.assets)
+    .set({ processing_status: 'rendering' })
+    .where(eq(schema.assets.id, asset_id));
+
+  return c.json({
+    message: 'Video render requires Node.js — use the Fastify API server for rendering',
+    assetId: asset_id,
+    status: 'render_via_fastify',
+  }, 202);
 });
 
 export default app;

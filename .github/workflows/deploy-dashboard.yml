@@ -1,0 +1,58 @@
+name: Deploy Dashboard (Cloudflare Pages)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/domain/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build & Deploy Dashboard
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.CF_API_TOKEN }}" ]; then
+            echo "::error::CF_API_TOKEN secret is not configured"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CF_ACCOUNT_ID }}" ]; then
+            echo "::error::CF_ACCOUNT_ID secret is not configured"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm run build
+
+      - name: Build dashboard
+        run: pnpm --filter @cronus/dashboard build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy apps/dashboard/dist --project-name=cronus-dashboard

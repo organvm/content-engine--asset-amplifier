@@ -1,0 +1,38 @@
+{
+  "name": "@cronus/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc -w & node --watch dist/index.js",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cronus/analytics": "workspace:*",
+    "@cronus/asset-ingestion": "workspace:*",
+    "@cronus/config": "workspace:*",
+    "@cronus/content-generation": "workspace:*",
+    "@cronus/db": "workspace:*",
+    "@cronus/domain": "workspace:*",
+    "@cronus/fragment-extraction": "workspace:*",
+    "@cronus/logger": "workspace:*",
+    "@cronus/natural-center": "workspace:*",
+    "@cronus/platform-adapter": "workspace:*",
+    "@cronus/queue": "workspace:*",
+    "@cronus/scheduler": "workspace:*",
+    "@cronus/scoring": "workspace:*",
+    "@cronus/video-renderer": "workspace:*",
+    "@cronus/webhook-dispatcher": "workspace:*",
+    "bullmq": "^5.41.6",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9"
+  }
+}

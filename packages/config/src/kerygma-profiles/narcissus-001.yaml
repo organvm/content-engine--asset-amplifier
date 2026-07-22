@@ -1,0 +1,56 @@
+project: narcissus
+account: 4444j99
+title:
+  - "#neurotic"
+  - "#narcissistic"
+  - "#narcissist"
+  - "#narcissus"
+
+canonical_url: /use/narcissus/001
+
+voice:
+  mode: literary-research
+  density: high
+  promotionality: low
+
+visual_rules:
+  grid_role: seed
+  palette: monochrome
+  preferred_format: carousel
+
+caption_forms:
+  - seed-essay
+  - influence-note
+  - instrument-invitation
+
+audience_hypothesis:
+  problem_first:
+    question: "What problem are they trying to solve?"
+    hypothesis: "Seeking interactive aesthetic tools that reflect personal mythos or looking for deep, conceptual approaches to identity."
+  identity_first:
+    question: "What kind of person do they want to be seen as?"
+    hypothesis: "Aesthetic pioneers, creative technologists, art theorists."
+  opportunity_first:
+    question: "What are they trying to gain?"
+    hypothesis: "Social connection through shared artistic protocols (the relay), inspiration for their own digital environments."
+
+kpi_architecture:
+  attention:
+    - reach
+    - instrument_arrivals
+  engagement_quality:
+    - start_rate
+    - completion_rate
+  retention:
+    - average_lineage_depth
+    - branches_per_seed
+  owned_audience:
+    - export_rate
+    - relay_send_rate
+  business_impact:
+    - public_archive_opt_in
+    - saves_per_reach
+
+conversion:
+  primary: application_start
+  secondary: relay_invite

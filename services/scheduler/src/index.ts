@@ -1,7 +1,8 @@
 import { getDb, schema } from '@cronus/db';
-import { eq, and, inArray } from '@cronus/db';
+import { eq, and, inArray, lte } from '@cronus/db';
 import { ApprovalStatus, PublishStatus, ScheduleStrategy } from '@cronus/domain';
 import { createLogger } from '@cronus/logger';
+import { createQueue } from '@cronus/queue';
 import { randomUUID } from 'node:crypto';
 
 const log = createLogger('scheduler');
@@ -82,4 +83,84 @@ export async function scheduleContent(params: {
 
   log.info({ scheduledCount: publishEvents.length }, 'Scheduling complete');
   return publishEvents;
+}
+
+/**
+ * Queries all due publish_events (scheduled_at <= now and status = 'scheduled')
+ * and dispatches them to BullMQ ('publish.execute').
+ */
+export async function dispatchDuePublishEvents(): Promise<string[]> {
+  const db = getDb();
+  const now = new Date();
+
+  // Find due publish events
+  const dueEvents = await db
+    .select()
+    .from(schema.publishEvents)
+    .where(
+      and(
+        eq(schema.publishEvents.status, PublishStatus.scheduled),
+        lte(schema.publishEvents.scheduled_at, now)
+      )
+    );
+
+  if (dueEvents.length === 0) {
+    return [];
+  }
+
+  log.info({ count: dueEvents.length }, 'Found due publish events to dispatch');
+
+  const publishQueue = createQueue('publish.execute');
+  const dispatchedIds: string[] = [];
+
+  for (const event of dueEvents) {
+    try {
+      // Mark event as publishing to avoid duplicate enqueueing
+      await db
+        .update(schema.publishEvents)
+        .set({ status: PublishStatus.publishing })
+        .where(eq(schema.publishEvents.id, event.id));
+
+      await publishQueue.add('publish.execute', {
+        publishEventId: event.id,
+      });
+
+      dispatchedIds.push(event.id);
+      log.info({ eventId: event.id }, 'Dispatched publish event to queue');
+    } catch (err) {
+      log.error({ err, eventId: event.id }, 'Failed to dispatch publish event');
+      // Reset back to scheduled for retry
+      await db
+        .update(schema.publishEvents)
+        .set({ status: PublishStatus.scheduled })
+        .where(eq(schema.publishEvents.id, event.id));
+    }
+  }
+
+  return dispatchedIds;
+}
+
+/**
+ * Starts an in-memory background loop polling for due publish events.
+ */
+export function startSchedulerLoop(intervalMs = 60000): { stop: () => void } {
+  log.info({ intervalMs }, 'Starting background scheduler dispatch loop');
+
+  const timer = setInterval(async () => {
+    try {
+      const dispatched = await dispatchDuePublishEvents();
+      if (dispatched.length > 0) {
+        log.info({ dispatchedCount: dispatched.length }, 'Scheduler loop cycle dispatched events');
+      }
+    } catch (err) {
+      log.error({ err }, 'Scheduler loop cycle error');
+    }
+  }, intervalMs);
+
+  return {
+    stop: () => {
+      clearInterval(timer);
+      log.info('Scheduler dispatch loop stopped');
+    },
+  };
 }

@@ -1,5 +1,5 @@
 import { resolveProviders } from '@cronus/config';
-import { getDb, schema } from '@cronus/db';
+import { getDb, schema, sql } from '@cronus/db';
 import { eq, inArray } from '@cronus/db';
 import { ApprovalStatus } from '@cronus/domain';
 import { createLogger } from '@cronus/logger';
@@ -42,11 +42,12 @@ export async function scoreContentUnits(contentUnitIds: string[]) {
     return;
   }
 
-  // Parse brand embedding from storage (pgvector column returns number[] directly,
-  // legacy text columns store stringified JSON)
+  // Brand embedding is stored as pgvector; Drizzle returns number[] directly
   const brandEmbedding: number[] = Array.isArray(nc.brand_embedding)
-    ? nc.brand_embedding
-    : JSON.parse(nc.brand_embedding);
+    ? (nc.brand_embedding as number[])
+    : typeof nc.brand_embedding === 'string'
+      ? JSON.parse(nc.brand_embedding as string)
+      : [];
 
   log.info({ brandId, unitCount: units.length }, 'Scoring content batch');
 
@@ -85,10 +86,10 @@ export async function scoreContentUnits(contentUnitIds: string[]) {
 }
 
 /**
- * Calculates cosine similarity between two numeric vectors.
+ * Calculates cosine similarity between two numeric vectors in-memory.
  */
-function calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (vecA.length !== vecB.length) return 0;
+export function calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length || vecA.length === 0) return 0;
   
   let dotProduct = 0;
   let normA = 0;
@@ -104,4 +105,33 @@ function calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
   if (denominator === 0) return 0;
   
   return dotProduct / denominator;
+}
+
+/**
+ * Native pgvector cosine similarity search on PostgreSQL.
+ * Queries Natural Centers ordered by vector distance (<=> operator).
+ */
+export async function querySimilarNaturalCenters(queryEmbedding: number[], limit = 5) {
+  const db = getDb();
+  const vectorStr = `[${queryEmbedding.join(',')}]`;
+
+  try {
+    const results = (await db.execute(sql`
+      SELECT id, brand_id, version, 
+             1 - (brand_embedding <=> ${vectorStr}::vector) as similarity
+      FROM natural_centers
+      ORDER BY brand_embedding <=> ${vectorStr}::vector ASC
+      LIMIT ${limit}
+    `)) as unknown as Array<Record<string, unknown>>;
+
+    return (results || []).map((row: Record<string, unknown>) => ({
+      id: String(row.id ?? ''),
+      brandId: String(row.brand_id ?? ''),
+      version: Number(row.version ?? 1),
+      similarity: Number(row.similarity ?? 0),
+    }));
+  } catch (err) {
+    log.warn({ err }, 'pgvector execute query failed, returning empty similarity list');
+    return [];
+  }
 }

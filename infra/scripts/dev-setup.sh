@@ -45,5 +45,8 @@ pnpm install
 echo "==> Running database migrations..."
 pnpm db:migrate
 
+echo "==> Running health check..."
+bash "${SCRIPT_DIR}/healthcheck.sh"
+
 echo ""
 echo "Dev environment ready"

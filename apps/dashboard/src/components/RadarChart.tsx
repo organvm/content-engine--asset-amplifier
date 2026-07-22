@@ -1,4 +1,12 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+import {
+  Radar,
+  RadarChart as RechartsRadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface RadarDimension {
   key: string;
@@ -13,131 +21,41 @@ interface RadarChartProps {
   onSelect?: (key: string) => void;
 }
 
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function buildPolygonPoints(
-  cx: number,
-  cy: number,
-  maxR: number,
-  values: number[],
-  angleStep: number,
-): string {
-  return values
-    .map((v, i) => {
-      const r = v * maxR;
-      const p = polarToCartesian(cx, cy, r, i * angleStep);
-      return `${p.x},${p.y}`;
-    })
-    .join(' ');
-}
-
 export default function RadarChart({
   dimensions,
   size = 280,
-  selectedKey = null,
+  selectedKey: _selectedKey = null,
   onSelect,
 }: RadarChartProps) {
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxR = size / 2 - 32;
-  const n = dimensions.length;
-  const angleStep = n > 0 ? 360 / n : 0;
-  const rings = [0.25, 0.5, 0.75, 1.0];
-
-  const dataPoints = useMemo(
-    () => dimensions.map(d => d.value),
-    [dimensions],
-  );
-
-  const dataPolygon = useMemo(
-    () => buildPolygonPoints(cx, cy, maxR, dataPoints, angleStep),
-    [cx, cy, maxR, dataPoints, angleStep],
-  );
-
   return (
-    <svg
-      viewBox={`0 0 ${size} ${size}`}
-      className="w-full max-w-[320px] mx-auto"
-      role="img"
-      aria-label="Brand identity radar chart"
-    >
-      {/* Concentric rings */}
-      {rings.map(r => {
-        const ringPoints = Array.from({ length: n }, (_, i) => {
-          const p = polarToCartesian(cx, cy, maxR * r, i * angleStep);
-          return `${p.x},${p.y}`;
-        }).join(' ');
-        return (
-          <polygon
-            key={r}
-            points={ringPoints}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={1}
+    <div className="mx-auto" style={{ width: size, height: size }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsRadarChart cx="50%" cy="50%" outerRadius="70%" data={dimensions}>
+          <PolarGrid stroke="#e5e7eb" />
+          <PolarAngleAxis 
+            dataKey="label" 
+            tick={{ fill: '#6b7280', fontSize: 10, fontWeight: 500 }}
+            onClick={(props: { value?: string }) => {
+              if (onSelect && props.value) {
+                const dim = dimensions.find(d => d.label === props.value);
+                if (dim) onSelect(dim.key);
+              }
+            }}
+            style={{ cursor: onSelect ? 'pointer' : 'default' }}
           />
-        );
-      })}
-
-      {/* Axis lines */}
-      {dimensions.map((_, i) => {
-        const p = polarToCartesian(cx, cy, maxR, i * angleStep);
-        return (
-          <line
-            key={i}
-            x1={cx}
-            y1={cy}
-            x2={p.x}
-            y2={p.y}
-            stroke="#e5e7eb"
-            strokeWidth={1}
+          <PolarRadiusAxis angle={30} domain={[0, 1]} tick={false} axisLine={false} />
+          <Radar
+            name="Identity"
+            dataKey="value"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            fill="#3b82f6"
+            fillOpacity={0.15}
+            activeDot={{ r: 5, fill: '#2563eb', stroke: 'white', strokeWidth: 2 }}
+            dot={{ r: 3, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
           />
-        );
-      })}
-
-      {/* Data polygon */}
-      <polygon
-        points={dataPolygon}
-        fill="rgba(59, 130, 246, 0.15)"
-        stroke="#3b82f6"
-        strokeWidth={2}
-      />
-
-      {/* Data points */}
-      {dimensions.map((d, i) => {
-        const r = d.value * maxR;
-        const p = polarToCartesian(cx, cy, r, i * angleStep);
-        const labelP = polarToCartesian(cx, cy, maxR + 18, i * angleStep);
-        const isSelected = d.key === selectedKey;
-
-        return (
-          <g
-            key={d.key}
-            onClick={() => onSelect?.(d.key)}
-            className={onSelect ? 'cursor-pointer' : ''}
-          >
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={isSelected ? 5 : 3}
-              fill={isSelected ? '#2563eb' : '#3b82f6'}
-              stroke="white"
-              strokeWidth={2}
-            />
-            <text
-              x={labelP.x}
-              y={labelP.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              className="text-[9px] font-medium fill-gray-500 select-none"
-            >
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+        </RechartsRadarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

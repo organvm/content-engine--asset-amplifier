@@ -9,12 +9,30 @@ import { createLogger } from '@cronus/logger';
 const log = createLogger('asset-ingestion');
 
 /**
+ * Pure validation helper for asset uploads.
+ */
+export function validateAssetUpload(originalFilename: string, bufferLength: number): { mediaType: MediaType; extension: string } {
+  const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+  if (bufferLength > MAX_SIZE) {
+    throw new Error('File size exceeds 2GB limit');
+  }
+
+  const extension = path.extname(originalFilename).toLowerCase();
+  let mediaType: MediaType;
+
+  if (['.mp4', '.mov'].includes(extension)) {
+    mediaType = MediaType.video;
+  } else if (['.png', '.jpg', '.jpeg', '.tiff', '.tif'].includes(extension)) {
+    mediaType = MediaType.image;
+  } else {
+    throw new Error(`Unsupported file type: ${extension}`);
+  }
+
+  return { mediaType, extension };
+}
+
+/**
  * Validates and ingests a single asset into the system.
- * 
- * 1. Validates media type and file size.
- * 2. Uploads to object storage.
- * 3. Creates Asset record in the database.
- * 4. Enqueues a background job for processing (fragment extraction).
  */
 export async function ingestAsset(params: {
   brandId: string;
@@ -27,24 +45,7 @@ export async function ingestAsset(params: {
   const storage = createStorage();
   const assetQueue = createQueue('asset.process');
 
-  // 1. Validate file type/size (FR-001: MP4/MOV/PNG/JPG/TIFF, ≤2GB)
-  // Max size check (2GB)
-  const MAX_SIZE = 2 * 1024 * 1024 * 1024;
-  if (buffer.length > MAX_SIZE) {
-    throw new Error('File size exceeds 2GB limit');
-  }
-
-  const extension = path.extname(originalFilename).toLowerCase();
-  let mediaType: MediaType;
-
-  if (['.mp4', '.mov'].includes(extension)) {
-    mediaType = MediaType.video;
-  } else if (['.png', '.jpg', '.jpeg', '.tiff', '.tif'].includes(extension)) {
-    mediaType = MediaType.image;
-  } else {
-    log.warn({ extension, originalFilename }, 'Unsupported file extension');
-    throw new Error(`Unsupported file type: ${extension}`);
-  }
+  const { mediaType, extension } = validateAssetUpload(originalFilename, buffer.length);
 
   // 2. Generate unique IDs and storage keys
   const assetId = randomUUID();

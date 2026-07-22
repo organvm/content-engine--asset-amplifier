@@ -7,18 +7,12 @@ import { constructUserPrompt, getBaseSystemPrompt } from './prompts.js';
 import { formatMedia } from './formatter.js';
 import { randomUUID } from 'node:crypto';
 
-export { deduplicateContentUnits } from './dedup.js';
+export { deduplicateContentUnits, findDuplicateContentUnits } from './dedup.js';
 
 const log = createLogger('content-generation');
 
 /**
  * Generates platform-native content units for an asset's fragments.
- *
- * 1. Loads brand context and Natural Center (if exists).
- * 2. Iterates through visual fragments (clips, keyframes, crops).
- * 3. Calls the resolved LLM provider to generate captions and hashtags per platform.
- * 4. Formats media for the target platform.
- * 5. Saves ContentUnit records for review.
  */
 export async function generateAssetContent(params: {
   brandId: string;
@@ -65,7 +59,6 @@ export async function generateAssetContent(params: {
           brandName: brand.name,
           platform,
           fragmentDescription: fragment.description || undefined,
-          // TODO: link transcript hook if it matches this fragment's timestamp
         });
 
         const responseText = await llm.generate(userPrompt, {
@@ -75,7 +68,6 @@ export async function generateAssetContent(params: {
 
         let aiOutput;
         try {
-          // Extract JSON from response (LLM may include markdown or explanation)
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           if (!jsonMatch) throw new Error('No JSON found');
           aiOutput = JSON.parse(jsonMatch[0]);
@@ -103,15 +95,14 @@ export async function generateAssetContent(params: {
           hashtags: aiOutput.hashtags || [],
           media_key: mediaKey,
           media_type: mediaType,
-          nc_score: 0, // Scored in T029
+          nc_score: 0,
           nc_score_breakdown: {},
           approval_status: ApprovalStatus.pending,
-          similarity_hash: randomUUID(), // Computed in T030
+          similarity_hash: randomUUID(),
         });
 
       } catch (err) {
         log.error({ err, fragmentId: fragment.id, platform }, 'Failed to generate content unit');
-        // Continue to next unit even if one fails
       }
     }
   }
