@@ -84,7 +84,7 @@ Cross-cutting:
 - **Columns are `snake_case` in the DB**; Drizzle insert/update calls use snake_case keys (`brand_id`, `processing_status`, …). Wire format is camelCase via `toCamel`/`mapRows` (`src/mappers.ts`); use **`toSnake`** to convert camelCase inputs back before writes. New routes: snake_case for Drizzle, camelCase for JSON.
 - **Two client drivers, same schema:** `src/client.ts` uses `drizzle-orm/postgres-js` (Fastify/CLI/workers); `apps/api/src/worker.ts` uses `drizzle-orm/neon-http` (edge). A schema edit affects both.
 - **13 tables** (not 9): `agencies`, `brands`, `natural_centers`, `assets`, `fragments`, `content_units`, `platform_connections`, `publish_events`, `performance_observations`, plus (migration `0002`, "Surface Composer") `artwork_projects`, `publication_variants`, `linked_applications`, `conversion_events`.
-- ⚠️ **Migrations lag the schema.** `src/migrations/` has only `0001_initial.sql` + `0002_pgvector_and_surface_composer.sql`, but the Drizzle schema files already carry columns absent from any migration: `brands.stripe_customer_id`/`subscription_*`, `assets.rendered_video_key`, `natural_centers.inquiries`. **Generate a migration before provisioning a fresh DB.** Config: `packages/db/drizzle.config.ts` (reads `DATABASE_URL`), output `packages/db/src/migrations/`.
+- **Migrations** (`src/migrations/`, hand-authored SQL): `0001_initial.sql`, `0002_pgvector_and_surface_composer.sql`, `0003_stripe_billing_and_render_columns.sql` (adds `brands.stripe_customer_id`/`subscription_*`, `assets.rendered_video_key`, `natural_centers.inquiries` — the columns the Drizzle schema carries). Applied by `packages/db/src/migrations` via `pnpm db:migrate` (`src/migrate.ts`). When you add/alter a column in a schema file, **hand-write the next `NNNN_*.sql`** — `drizzle-kit generate` emits a full baseline here (no journal), not an incremental diff.
 
 ## Provider Resolution (`packages/config`)
 
@@ -126,13 +126,13 @@ cd apps/dashboard && npx vite                           # dashboard (no `dev` sc
 pnpm --filter @cronus/worker dev                        # BullMQ worker (needs Redis)
 pnpm --filter temporal-worker dev                       # Temporal worker (needs Temporal server)
 
-# Database (Drizzle) — ⚠️ both root scripts are currently BROKEN:
-#   pnpm db:migrate → "@cronus/db migrate" but @cronus/db has no `migrate` script
-#   pnpm db:seed    → "tsx infra/scripts/seed.ts" but that file does not exist
-# Working equivalents:
-cd packages/db && npx drizzle-kit migrate               # apply migrations (set DATABASE_URL)
-cd packages/db && npx drizzle-kit generate              # generate migration from schema drift
-npx tsx packages/db/src/seed.ts                         # actual seed script location
+# Database — migrations are HAND-AUTHORED SQL in packages/db/src/migrations/,
+# applied in filename order by packages/db/src/migrate.ts (NOT drizzle-kit migrate,
+# which needs a meta/_journal.json snapshot this repo does not keep). Set DATABASE_URL.
+pnpm db:migrate          # tsx packages/db/src/migrate.ts — applies pending *.sql (idempotent via _migrations table)
+pnpm db:seed             # tsx packages/db/src/seed.ts — seeds the default dev dataset
+# Drizzle schema is the source of truth; when you add/alter a column, hand-write the
+# next NNNN_*.sql to match (drizzle-kit generate emits a full baseline here, not a diff).
 
 # Local infra — docker:up starts SEVEN services (not just Postgres+Redis):
 pnpm docker:up           # postgres, redis, minio, temporal, temporal-ui, api, worker

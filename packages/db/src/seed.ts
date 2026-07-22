@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { getDb } from './client.js';
 import { schema } from './schema/index.js';
 
@@ -93,4 +94,11 @@ export async function seedDatabase() {
     console.error('Database seeding failed:', err);
     throw err;
   }
+}
+
+// Run directly (e.g. `tsx packages/db/src/seed.ts` / `pnpm db:seed`), not on import.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
 }
