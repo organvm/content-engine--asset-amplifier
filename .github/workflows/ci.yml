@@ -44,7 +44,10 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-          
+
+      - name: Verify docs (CLAUDE.md ↔ tree)
+        run: node scripts/verify-docs.mjs
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
         
