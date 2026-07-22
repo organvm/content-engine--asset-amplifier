@@ -4,19 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-**Cronus Metabolus** (formerly Content Engine — Asset Amplifier) is an AI-powered content yield engine. It ingests one premium asset (hero film, 3D render, product shoot), fragments it (clips, stills, captions), and synthesizes 30+ days of platform-optimized social posts. Partnership: Padavano (engineering) + Lefler Design (UI/UX, marketing, sales). Organ III (Ergon — Commerce). MVP operational, production deployed.
+**Cronus Metabolus** (formerly Content Engine — Asset Amplifier) is an AI-powered content yield engine. It ingests one premium asset (hero film, 3D render, product shoot), fragments it (clips, stills, captions), and synthesizes 30+ days of platform-optimized social posts. Partnership: Padavano (engineering) + Lefler Design (UI/UX, marketing, sales). Organ III (Ergon — Commerce). MVP operational; deploy configs exist for Cloudflare, Railway, Render, and Vercel (see Live Deployments).
 
 ## Live Deployments
 
-| Component | URL / Identifier |
+Recorded status is **LOCAL** (see auto-generated System Context). The URLs below are local dev endpoints — production URLs are not recorded in this file.
+
+| Component | Local endpoint / Identifier |
 |-----------|------------------|
-| API (Cloudflare Worker) | http://localhost:3000 |
-| Dashboard (Cloudflare Pages) | http://localhost:5173 |
+| API — Cloudflare Worker (`worker.ts`) / Fastify (`server.ts`) | http://localhost:3000 |
+| Dashboard (Vite SPA) | http://localhost:5173 |
 | Pitch Decks | https://organvm.github.io/content-engine--asset-amplifier |
 | Database | Neon `green-art-84790526` (PostgreSQL 17 + pgvector) |
 | R2 bucket | `cronus-assets` |
 | Issues | [organvm-iii-ergon/content-engine--asset-amplifier/issues](https://github.com/organvm-iii-ergon/content-engine--asset-amplifier/issues) |
 | Project Board | [Operating Board](https://github.com/orgs/organvm-iii-ergon/projects/6) |
+
+**Deploy targets** (configs live in the repo; workflows in `.github/workflows/`):
+
+- **Cloudflare Worker** — API production surface (`apps/api` + `wrangler.toml`); `deploy-api.yml` on push to `main` touching `apps/api/**`, `packages/**`, `services/**`.
+- **Cloudflare Pages** — Dashboard (`deploy-dashboard.yml` → `pages deploy apps/dashboard/dist`).
+- **Vercel** — Dashboard SPA (`apps/dashboard/vercel.json`). ⚠️ `apps/dashboard/vite.config.ts` sets `base: '/content-engine--asset-amplifier/dashboard/'` (a GitHub-Pages subpath); override to `/` at build time for correct Vercel/Pages **root** hosting.
+- **Railway** (`railway.toml`, nixpacks) & **Render** (`render.yaml`, free/ohio) — both run the **Fastify** `server.ts` (Node), *not* the Worker; Render sets `STORAGE_MODE=filesystem` (no R2).
+- **GitHub Pages** — `pitch-deck/` static site (`deploy-pitch-decks.yml`).
 
 ## Roadmap (GitHub Issues)
 
@@ -27,62 +37,82 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | γ (Scale) | #13 Agency dashboard, #14 Design resizing |
 | infra | #10 CI/CD, #11 BullMQ/Temporal, #12 pgvector migration |
 
+> **Infra status:** #10 (CI in `.github/workflows/ci.yml`), #11 (dual **BullMQ + Temporal** runtimes — see `docs/adr/002-dual-runtime-bullmq-temporal.md`), and #12 (pgvector in migration `0002`, cosine search in `@cronus/scoring`) are all implemented in the tree.
+
 ## Repo Layout (pnpm + Turbo monorepo)
 
-Workspace globs in `pnpm-workspace.yaml`: `apps/*`, `services/*`, `packages/*`. Node ≥22, pnpm ≥9, ESM throughout (`"type": "module"`).
+Workspace globs in `pnpm-workspace.yaml`: `apps/*`, `services/*`, `packages/*` (note: `infra/` is **not** a workspace — `apps/temporal-worker` imports `infra/temporal/*` by relative path). Node ≥22, pnpm ≥9, ESM throughout (`"type": "module"`).
 
-- **`apps/api`** — REST API. **Two runtimes** (see Architecture).
-- **`apps/dashboard`** — React 19 + Vite 8 + Tailwind 3. Deployed to Cloudflare Pages.
-- **`apps/cli`** — Management CLI (`tsx`-run TS).
-- **`packages/`** — `config` (shared TS/ESLint + AI provider resolver), `db` (Drizzle + Neon), `domain` (shared types/Zod), `logger` (Pino), `queue` (BullMQ), `storage` (R2/S3 abstraction).
-- **`services/`** — `asset-ingestion`, `fragment-extraction`, `natural-center`, `content-generation`, `scoring`, `scheduler`, `platform-adapter`, `analytics`, `design-resizer`, `audience-engine`. Imported into the API as workspace deps; many are stubs/sources-only and bundled via `wrangler.toml [alias]`.
-- **`infra/docker`** — local Postgres + Redis compose.
-- **`infra/temporal`** — workflow defs (queued for #11).
+**Apps** (`apps/*`):
 
-## Architecture: Dual-Runtime API
+- **`apps/api`** (`@cronus/api`) — REST API. **Three-runtime split** (see Architecture): Cloudflare Worker (prod), Fastify server (full pipeline), plus the two worker processes below that drain its queues.
+- **`apps/worker`** (`@cronus/worker`) — long-running **BullMQ** consumer. Registers 6 processors (`asset.process`, `content.generate`, `publish.execute`, `nc.derive`, `analytics.collect`, `render.video`) and co-hosts the scheduler polling loop (`startSchedulerLoop`, 60 s). Needs Redis (`REDIS_URL`).
+- **`apps/temporal-worker`** (`temporal-worker`) — **Temporal** worker. Registers 5 workflows + 5 activity groups on task queue `cronus-content-engine`; runs via `tsx` (no build step), bundles workflow code from `infra/temporal/*` at startup. Needs a Temporal server (`TEMPORAL_ADDRESS`, default `localhost:7233`).
+- **`apps/dashboard`** (`@cronus/dashboard`) — React 19 + Vite 8 + **Tailwind 4** (`@tailwindcss/postcss`). ⚠️ `package.json` has **no `dev` script** (`build` runs `tsc` only, not `vite build`) — dev-serve with `npx vite`, real bundle with `npx vite build`.
+- **`apps/cli`** (`@cronus/cli`) — Commander.js CLI, binary `cronus`. Verbs: `ingest` (parse brainstorm `.md`/`.txt` → Kerygma/ArtworkProject JSON), `manifest` (Surface Composer manifest), `upload` (POST asset to API), `status` (job status). No `dev`/`start` script — run with `npx tsx apps/cli/src/index.ts <verb>`.
+- **`apps/mobile`** (`@cronus/mobile`) — React Native 0.76 + Expo 52 MVP (Dashboard + ReviewQueue screens). ⚠️ missing Expo asset files (`assets/icon.png` etc.) so it can't build for production yet.
+- **`apps/narcissus-v0`** (`@cronus/narcissus-v0`) — standalone browser prototype (recursive-canvas "infinite mirror", roadmap #7 Identity Mirror). Fully isolated: no `@cronus/*` deps, lints with **oxlint**, no tests.
 
-`apps/api` is **deployed as a Cloudflare Worker** (`src/worker.ts`, Hono) but **also runs locally as a Fastify server** (`src/server.ts`). They are not feature-equivalent:
+**Packages** (`packages/*`, all `@cronus/<name>`): `config` (Zod env validation + AI provider resolver + crypto), `db` (Drizzle schema + Neon/postgres-js clients + mappers + migrations + seed), `domain` (types-only: const enums for `ApprovalStatus`/`ProcessingStatus`/`Platform`/…), `logger` (Pino), `queue` (typed BullMQ factories + `JobPayloads`), `storage` (AWS-SDK-v3 S3/R2 wrapper + `FilesystemStorageClient` fallback).
 
-- `worker.ts` is the canonical production surface — Hono on Cloudflare Workers, R2 binding for asset storage, Neon HTTP driver for Postgres. **Cannot run FFmpeg / native binaries** — the Worker collapses the fragment-extraction pipeline by treating the whole upload as one synthetic fragment, then calls the LLM provider directly to mint per-platform `content_units`.
-- `server.ts` is the Fastify dev/full-stack version with route plugins under `src/routes/*` and an `authPlugin`. Use this when you need the full pipeline (queues, services, FFmpeg-bound work).
-- `wrangler.toml`'s `[alias]` block is **load-bearing**: it rewrites every `@cronus/*` workspace import to that package's `src/index.ts` so the Worker can bundle without depending on built `dist/` output. When adding a new package consumed by the Worker, add an alias entry.
-- Worker secrets are managed via `wrangler secret put`. The Worker copies all bindings into `process.env` in a global middleware so shared packages (`@cronus/config`) work identically in both runtimes, and forces `NODE_ENV=production` to skip Ollama-localhost provider checks.
+**Services** (`services/*`, 12 total, all `@cronus/<name>`) — **real implementations, not stubs** (a few adapters have partial paths, noted below):
 
-When editing API behavior, **check whether you need to update both `server.ts` routes and `worker.ts`** — they drift easily.
+- `asset-ingestion`, `fragment-extraction` (FFmpeg via fluent-ffmpeg + sharp + Whisper), `natural-center` (Claude Vision brand-identity derivation), `content-generation`, `scoring` (embed + cosine vs NC), `scheduler`, `platform-adapter`, `analytics`, `design-resizer` (sharp smart-crop).
+- `platform-adapter` registers **5 adapters** for 7 `Platform` values (instagram_feed/story/reels, linkedin, x, tiktok, youtube_shorts) + in-memory `rate-limiter.ts`. ⚠️ YouTube-Shorts publish and LinkedIn media upload are partial/simulated.
+- **Node-only, NOT in the `wrangler` alias** (cannot run in the Worker): `audience-engine` (project/essay conversion funnels over `artwork_projects`), `video-renderer` (Remotion b-roll compositing → R2), `webhook-dispatcher` (HMAC-signed campaign event fan-out; reads `SWARM_WEBHOOK_URLS`).
+
+**Infra** (`infra/*`): `docker` (full local stack — see Commands), `temporal` (**live** workflow + activity source, imported by `apps/temporal-worker`), `scripts` (dev-setup, seed, e2e-demo, healthcheck), `tests` (E2E integration, run with a dedicated vitest config). Architecture decisions in `docs/adr/` — **ADR-001 (BullMQ-only) is superseded by ADR-002 (dual runtime)**.
+
+## Architecture: Three Runtimes
+
+`apps/api` ships as **two API surfaces that are not feature-equivalent**, plus **two async worker processes** that drain its queues. When editing API behavior, **check whether both `server.ts` and `worker.ts` need updating — they drift easily.**
+
+1. **Cloudflare Worker** (`src/worker.ts`, Hono) — canonical production surface. R2 binding for storage, Neon **HTTP** driver for Postgres. **Cannot run FFmpeg / native binaries / BullMQ** — it collapses the fragment-extraction pipeline into one synthetic fragment and calls the LLM directly to mint per-platform `content_units`. Queue/FFmpeg endpoints degrade gracefully (e.g. `render-video` → 202 "render_via_fastify", `/api/v1/jobs/:id` → 501). ⚠️ **The Worker has NO auth middleware** — `API_KEY` is a declared binding but is never enforced; only the Fastify runtime checks it.
+2. **Fastify server** (`src/server.ts`) — full-stack/dev runtime with `authPlugin` (`x-api-key` **or** `Authorization: Bearer`, health exempt), postgres-js driver, and ~9 route modules **absent from the Worker**: `projects`, `publication-variants`, `linked-applications`, `conversion-events`, `analytics`, `schedule`, `platforms`, `resize`, `video`. Enqueues BullMQ jobs (e.g. `POST /brands/:id/render-video` → `render.video`). 2 GB multipart limit.
+3. **BullMQ worker** (`apps/worker`) + **Temporal worker** (`apps/temporal-worker`) — the async execution layer. Per **ADR-002**, the intended split is: **Temporal** owns durable multi-step flows (asset ingestion, content generation, NC derivation, publishing); **BullMQ** owns lightweight/stateless jobs (analytics collect, design resize, webhook dispatch). The boundary is *decided but not yet enforced* — `apps/worker` currently still runs BullMQ processors for the Temporal-owned concerns too.
+
+Cross-cutting:
+
+- `wrangler.toml`'s `[alias]` block is **load-bearing**: it rewrites every `@cronus/*` import to that package's `src/index.ts` so the Worker bundles without built `dist/`. **When adding a package consumed by the Worker, add an alias entry** — but do **not** alias Node-only services (`audience-engine`, `video-renderer`, `webhook-dispatcher`).
+- ⚠️ **Latent Worker incompatibilities:** `fragment-extraction` (FFmpeg) and `design-resizer` (sharp native binary) are aliased into the Worker bundle but cannot actually execute at the edge — any Worker path reaching real extraction/resize would fail at runtime. The real pipeline only runs under Fastify + the worker processes.
+- `src/billing-handler.ts` is a **shared Stripe module imported by both runtimes** (Hono uses `c.req.text()` for the raw webhook body; Fastify stashes `req.rawBody` via a content-type parser). It writes `stripe_customer_id` / `subscription_tier` / `subscription_status` / `subscription_id` to `brands`, keyed to tiers `creator`/`studio`. ⚠️ `billing-handler.ts` and `routes/video.ts` are **untracked** in git as of this writing — they won't appear in `git log`.
+- The Worker copies all bindings into `process.env` in a global middleware and forces `NODE_ENV=production` (skips the Ollama localhost provider check). Secrets are set with `wrangler secret put`.
 
 ## DB Conventions (`packages/db`)
 
 - Drizzle ORM, dialect `postgresql`, schema files in `src/schema/*.ts`, root export `src/schema/index.ts`.
-- **Columns are `snake_case` in the DB**, and Drizzle insert/update calls use snake_case keys (`brand_id`, `processing_status`, …). API responses go through `toCamel`/`mapRows` (`src/mappers.ts`) so wire format is camelCase. Mirror this in new routes: snake_case for Drizzle, camelCase for JSON.
-- Migrations: `packages/db/src/migrations/`. Drizzle Kit reads `DATABASE_URL` from env (`drizzle.config.ts`).
-- Tables: `agencies`, `brands`, `natural_centers`, `assets`, `fragments`, `content_units`, `platform_connections`, `publish_events`, `performance_observations`.
+- **Columns are `snake_case` in the DB**; Drizzle insert/update calls use snake_case keys (`brand_id`, `processing_status`, …). Wire format is camelCase via `toCamel`/`mapRows` (`src/mappers.ts`); use **`toSnake`** to convert camelCase inputs back before writes. New routes: snake_case for Drizzle, camelCase for JSON.
+- **Two client drivers, same schema:** `src/client.ts` uses `drizzle-orm/postgres-js` (Fastify/CLI/workers); `apps/api/src/worker.ts` uses `drizzle-orm/neon-http` (edge). A schema edit affects both.
+- **13 tables** (not 9): `agencies`, `brands`, `natural_centers`, `assets`, `fragments`, `content_units`, `platform_connections`, `publish_events`, `performance_observations`, plus (migration `0002`, "Surface Composer") `artwork_projects`, `publication_variants`, `linked_applications`, `conversion_events`.
+- ⚠️ **Migrations lag the schema.** `src/migrations/` has only `0001_initial.sql` + `0002_pgvector_and_surface_composer.sql`, but the Drizzle schema files already carry columns absent from any migration: `brands.stripe_customer_id`/`subscription_*`, `assets.rendered_video_key`, `natural_centers.inquiries`. **Generate a migration before provisioning a fresh DB.** Config: `packages/db/drizzle.config.ts` (reads `DATABASE_URL`), output `packages/db/src/migrations/`.
 
 ## Provider Resolution (`packages/config`)
 
-`resolveProviders()` returns the active `llm`, `embedding`, `transcription` providers plus full fallback lists. Worker uses cloud providers only (Groq, Gemini, Cerebras, Anthropic, OpenAI); Ollama is skipped when `NODE_ENV=production`.
+`resolveProviders()` returns the active `llm`, `embedding`, `transcription` providers plus fallback lists. Fallback order (`src/providers.ts`): **Ollama → Groq → Gemini → Cerebras → Cloudflare Workers AI → Anthropic → OpenAI**. Ollama (local) is skipped when `NODE_ENV=production`. Model IDs are hardcoded per class in `providers.ts` (e.g. `AnthropicLLM` → `claude-sonnet-4-5-20250514`, `GroqLLM` → `llama-3.3-70b-versatile`) — update there, not here. The Zod env schema (`src/index.ts`) requires **`ANTHROPIC_API_KEY` unconditionally**; the other AI keys are read directly from `process.env` with `isRealKey()` guards, not validated at startup.
 
 ## Key Domain Concepts
 
 - **Metabolism** — break a Hero asset into fragments (clips/stills/text), then re-synthesize per-platform content.
-- **Natural Center** — per-brand identity profile derived from approved content, used to score new fragments for brand-fit. Persisted in `natural_centers`.
+- **Natural Center** — per-brand identity profile derived from approved content, used to score new fragments for brand-fit. Persisted in `natural_centers`; pgvector `brand_embedding vector(1536)`.
 - **Approval flow** — `content_units.approval_status ∈ {pending, approved, rejected}`; rejection writes `flagged_reason`.
-- **Temporal Workflows** — robust retriable pipelines for FFmpeg + AI generation (queued for #11).
+- **Artwork Projects** — a content-ownership container per brand (`artwork_projects`) grouping assets into a canonical unit with publication variants (`publication_variants`), an optional linked application (`linked_applications`), and a conversion funnel (`conversion_events`). Fastify-only; exposes a `GET /brands/:id/projects/:pid/manifest` endpoint. Served by `audience-engine` + `webhook-dispatcher`.
+- **Temporal / BullMQ workflows** — **live, not queued.** Durable multi-step pipelines run on Temporal (`infra/temporal/*` + `apps/temporal-worker`); lightweight jobs on BullMQ (`packages/queue` + `apps/worker`). See ADR-002 for the runtime boundary.
 
 ## Commands
 
 ```bash
-# Workspace (Turbo orchestrated)
+# Workspace (Turbo orchestrated; test/lint/typecheck all dependsOn ^build)
 pnpm install
-pnpm dev                 # turbo dev — all apps/services in parallel
-pnpm build               # turbo build (depends on ^build)
+pnpm dev                 # turbo dev — persistent parallel dev (note: dashboard has no dev script, see below)
+pnpm build               # turbo build
 pnpm test                # turbo test (Vitest)
-pnpm lint                # turbo lint (ESLint per workspace)
+pnpm lint                # turbo lint
 pnpm typecheck           # turbo typecheck (tsc --noEmit)
-pnpm format              # Prettier write
-pnpm format:check        # Prettier check
+pnpm format[:check]      # Prettier write / check
+pnpm demo                # tsx infra/scripts/e2e-demo.ts — in-process logic demo, no DB/HTTP
+pnpm healthcheck         # checks postgres/redis/minio/temporal containers + node/pnpm versions
 
-# Single-package work — use --filter
-pnpm --filter @cronus/api dev
+# Single-package work — use --filter (there is NO `@cronus/api dev` script)
 pnpm --filter @cronus/api test
 pnpm --filter @cronus/db typecheck
 
@@ -90,26 +120,39 @@ pnpm --filter @cronus/db typecheck
 pnpm --filter @cronus/db test -- src/mappers.test.ts
 pnpm --filter @cronus/api test -- -t "brand creation"
 
-# Database (Drizzle)
-pnpm db:migrate          # @cronus/db migrate
-pnpm db:seed             # tsx infra/scripts/seed.ts
+# App-specific dev servers
+cd apps/api && npx wrangler dev -c wrangler.toml        # Worker (the only live-reload API dev server)
+cd apps/dashboard && npx vite                           # dashboard (no `dev` script in package.json)
+pnpm --filter @cronus/worker dev                        # BullMQ worker (needs Redis)
+pnpm --filter temporal-worker dev                       # Temporal worker (needs Temporal server)
 
-# Local infra
-pnpm docker:up           # Redis + Postgres via infra/docker/docker-compose.yml
+# Database (Drizzle) — ⚠️ both root scripts are currently BROKEN:
+#   pnpm db:migrate → "@cronus/db migrate" but @cronus/db has no `migrate` script
+#   pnpm db:seed    → "tsx infra/scripts/seed.ts" but that file does not exist
+# Working equivalents:
+cd packages/db && npx drizzle-kit migrate               # apply migrations (set DATABASE_URL)
+cd packages/db && npx drizzle-kit generate              # generate migration from schema drift
+npx tsx packages/db/src/seed.ts                         # actual seed script location
+
+# Local infra — docker:up starts SEVEN services (not just Postgres+Redis):
+pnpm docker:up           # postgres, redis, minio, temporal, temporal-ui, api, worker
 pnpm docker:down
+bash infra/scripts/dev-setup.sh                         # one-shot bootstrap (env, containers, pgvector ext, migrate, healthcheck)
 
-# Cloudflare Worker (API)
+# E2E integration tests (separate config; skipped if DATABASE_URL is unset)
+npx vitest run --config infra/tests/vitest.config.ts
+
+# Cloudflare Worker (API) deploy + secrets
 cd apps/api
-npx wrangler dev -c wrangler.toml                       # local Worker dev
-npx wrangler deploy -c wrangler.toml                    # deploy
+npx wrangler deploy -c wrangler.toml
 echo "<value>" | npx wrangler secret put <NAME> -c wrangler.toml
 ```
 
 ## Required Env / Secrets
 
-Worker bindings (set via `wrangler secret put`): `DATABASE_URL`, `API_KEY`, `ENCRYPTION_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `CEREBRAS_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_CREATOR`, `STRIPE_PRICE_ID_STUDIO`, `DASHBOARD_URL`. R2 binding: `ASSETS_BUCKET` → `cronus-assets`.
+**Worker bindings** (set via `wrangler secret put`): `DATABASE_URL`, `API_KEY`, `ENCRYPTION_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `CEREBRAS_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID_CREATOR`, `STRIPE_PRICE_ID_STUDIO`, `DASHBOARD_URL`. R2 binding: `ASSETS_BUCKET` → `cronus-assets`. (Billing throws at runtime without **both** `STRIPE_PRICE_ID_*`.)
 
-For local Fastify dev, mirror the same names in a `.env`.
+**Node / worker-process env** (not Worker secrets): `REDIS_URL` (required by `@cronus/queue` at BullMQ worker startup), `TEMPORAL_ADDRESS` (default `localhost:7233`), `TEMPORAL_NAMESPACE` (default `default`), `API_URL` (b-roll URL in the render-video processor), `SWARM_WEBHOOK_URLS` (optional post-publish webhook fan-out), `STORAGE_MODE`/`STORAGE_ENDPOINT`/`STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` (S3/R2; `STORAGE_MODE=filesystem` falls back to disk — `createStorage()` does this **silently** if S3 vars are absent), `OLLAMA_HOST`/`OLLAMA_MODEL`/`OLLAMA_EMBED_MODEL` (local provider). For local Fastify dev, mirror the relevant names in a `.env`.
 
 ## Partnership Context
 
