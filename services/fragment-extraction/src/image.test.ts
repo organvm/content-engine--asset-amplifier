@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractImageFragments } from './image.js';
-import { getDb, schema } from '@cronus/db';
+import { getDb } from '@cronus/db';
 import { createStorage } from '@cronus/storage';
 import sharp from 'sharp';
 

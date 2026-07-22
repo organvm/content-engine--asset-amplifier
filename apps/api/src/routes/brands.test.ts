@@ -1,25 +1,25 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { buildApp } from '../server.js';
 import type { FastifyInstance } from 'fastify';
 
-const mockDb = {
+function makeChainable(resolvedValue: any) {
+  const promise = Promise.resolve(resolvedValue);
+  (promise as any).where = vi.fn().mockResolvedValue(resolvedValue);
+  (promise as any).orderBy = vi.fn().mockResolvedValue(resolvedValue);
+  return promise;
+}
+
+const mockDb: any = {
   insert: vi.fn().mockReturnThis(),
   values: vi.fn().mockReturnThis(),
   returning: vi.fn().mockResolvedValue([{ id: 'brand-1', name: 'Test Brand' }]),
   select: vi.fn().mockReturnThis(),
-  from: vi.fn().mockReturnThis(),
+  from: vi.fn().mockImplementation(() => makeChainable([{ id: 'brand-1', name: 'Test Brand' }])),
   where: vi.fn().mockReturnThis(),
   update: vi.fn().mockReturnThis(),
   set: vi.fn().mockReturnThis(),
-  then: function(resolve: any) {
-    resolve([{ id: 'brand-1', name: 'Test Brand' }]);
-  }
 };
-
-// Default where for get to work when it resolves without where
-mockDb.from = vi.fn().mockReturnValue(Object.assign(Promise.resolve([{ id: 'brand-1', name: 'Test Brand' }]), {
-  where: mockDb.where
-}));
 
 vi.mock('@cronus/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@cronus/db')>();
@@ -66,7 +66,6 @@ describe('Brands Routes', () => {
   });
 
   it('GET /api/v1/brands/:brandId should return a brand', async () => {
-    mockDb.then = function(resolve: any) { resolve([{ id: 'brand-1', name: 'Test Brand' }]); };
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/brands/brand-1',
@@ -76,7 +75,6 @@ describe('Brands Routes', () => {
   });
 
   it('PATCH /api/v1/brands/:brandId should update a brand', async () => {
-    mockDb.then = function(resolve: any) { resolve([{ id: 'brand-1', name: 'Updated Brand' }]); };
     mockDb.returning = vi.fn().mockResolvedValue([{ id: 'brand-1', name: 'Updated Brand' }]);
     const response = await app.inject({
       method: 'PATCH',

@@ -14,6 +14,7 @@ export const assets = pgTable('assets', {
   transcription: text('transcription'),
   processing_status: text('processing_status').notNull().default('uploaded'),
   fragment_count: integer('fragment_count').default(0),
+  rendered_video_key: text('rendered_video_key'),
   metadata: jsonb('metadata').default('{}'),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

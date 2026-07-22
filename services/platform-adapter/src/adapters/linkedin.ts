@@ -1,6 +1,7 @@
 import { ContentUnit, Platform, PlatformConnection } from '@cronus/domain';
 import { PlatformAdapter, PostMetrics, MediaSpec } from '../interface.js';
 import { createLogger } from '@cronus/logger';
+import { checkRateLimit as checkRateLimitFn } from '../rate-limiter.js';
 
 const log = createLogger('platform-adapter:linkedin');
 
@@ -13,8 +14,19 @@ export class LinkedInAdapter implements PlatformAdapter {
       return false;
     }
     log.info({ accountId: connection.platformAccountId }, 'Authenticating LinkedIn connection');
-    // TODO: Verify token against LinkedIn API: GET /v2/me
-    return true;
+    try {
+      const res = await fetch('https://api.linkedin.com/v2/me', {
+        headers: { 'Authorization': `Bearer ${connection.accessToken}` },
+      });
+      if (!res.ok) {
+        log.error({ status: res.status }, 'LinkedIn token verification failed');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      log.error({ err }, 'LinkedIn token verification error');
+      return false;
+    }
   }
 
   async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
@@ -30,7 +42,7 @@ export class LinkedInAdapter implements PlatformAdapter {
     const authorUrn = `urn:li:person:${connection.platformAccountId}`;
 
     // Prepare share request body (UGC Post API format)
-    const requestBody: any = {
+    const requestBody = {
       author: authorUrn,
       lifecycleState: 'PUBLISHED',
       specificContent: {
@@ -63,18 +75,11 @@ export class LinkedInAdapter implements PlatformAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       log.error({ status: res.status, errorText }, 'LinkedIn publish failed');
-      
-      // Fallback for demo environments if LinkedIn rejects the token:
-      // Return a simulated ID rather than crashing the pipeline, but log the real error.
-      const fallbackId = `li_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://linkedin.com/posts/${fallbackId}`,
-      };
+      throw new Error(`LinkedIn publish failed: ${res.status} ${errorText}`);
     }
 
-    const data = await res.json() as any;
-    const postId = data.id || `li_${Math.random().toString(36).substring(7)}`;
+    const data: Record<string, unknown> = await res.json();
+    const postId = (data.id as string) || `li_${Math.random().toString(36).substring(7)}`;
 
     return {
       platformPostId: postId,
@@ -86,13 +91,26 @@ export class LinkedInAdapter implements PlatformAdapter {
     if (!connection.accessToken) {
       throw new Error('LinkedIn: No access token provided');
     }
-    // TODO: Fetch from LinkedIn Analytics API
-    log.info({ platformPostId }, 'Fetching LinkedIn metrics (simulated)');
-    return {
-      views: 50,
-      engagement: 5,
-      raw: { source: 'simulated' },
-    };
+    try {
+      const res = await fetch(
+        `https://api.linkedin.com/v2/shares/${platformPostId}`,
+        { headers: { 'Authorization': `Bearer ${connection.accessToken}` } }
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'LinkedIn metrics fetch failed, returning defaults');
+        return { views: 0, engagement: 0, raw: { source: 'fallback' } };
+      }
+      const data: Record<string, unknown> = await res.json();
+      const summary = data.summary as Record<string, unknown> | undefined;
+      const views = (summary?.impressionCount as number) ?? 0;
+      const likes = (summary?.likeCount as number) ?? 0;
+      const comments = (summary?.commentCount as number) ?? 0;
+      const shares = (summary?.shareCount as number) ?? 0;
+      return { views, engagement: likes + comments + shares, raw: data };
+    } catch (err) {
+      log.error({ err }, 'LinkedIn metrics fetch error');
+      return { views: 0, engagement: 0, raw: { source: 'error' } };
+    }
   }
 
   getFormatSpec(): MediaSpec {
@@ -106,7 +124,6 @@ export class LinkedInAdapter implements PlatformAdapter {
   }
 
   async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
-    // LinkedIn API: 100 requests per member per day (varies by endpoint)
-    return false;
+    return checkRateLimitFn(connection, { maxRequests: 100, windowMs: 86400000 });
   }
 }

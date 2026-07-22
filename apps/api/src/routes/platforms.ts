@@ -37,7 +37,8 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
     }
 
     if (platform === 'instagram') {
-      const clientId = process.env.INSTAGRAM_CLIENT_ID || 'meta_client_id_placeholder';
+      const config = getConfig();
+      const clientId = config.INSTAGRAM_CLIENT_ID || 'meta_client_id_placeholder'; // allow-secret
       const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/instagram`;
       const scope = encodeURIComponent('instagram_basic,instagram_content_publish,pages_show_list');
       const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&state=${brandId}`;
@@ -104,10 +105,53 @@ export const platformRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /platforms/callback/instagram
   app.get('/platforms/callback/instagram', async (request, reply) => {
-    const { state: brandId } = request.query as { code?: string; state: string };
-    // Callback placeholder for Meta Graph token exchange
-    log.info({ brandId }, 'Instagram OAuth callback received');
-    return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=success`);
+    const { code, state: brandId } = request.query as { code?: string; state: string };
+    const config = getConfig();
+    const db = getDb();
+
+    if (!code) {
+      log.error({ brandId }, 'No code provided in Instagram OAuth callback');
+      return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=error`);
+    }
+
+    try {
+      const response = await axios.post('https://graph.facebook.com/v19.0/oauth/access_token', null, {
+        params: {
+          client_id: config.INSTAGRAM_CLIENT_ID, // allow-secret
+          client_secret: config.INSTAGRAM_CLIENT_SECRET, // allow-secret
+          redirect_uri: `${process.env.API_URL || 'http://localhost:3000'}/api/v1/platforms/callback/instagram`,
+          code,
+        },
+      });
+
+      const { access_token } = response.data; // allow-secret
+      const encryptedToken = encrypt(access_token); // allow-secret
+
+      await db.insert(schema.platformConnections).values({
+        id: randomUUID(),
+        brand_id: brandId,
+        platform: Platform.instagram_feed,
+        platform_account_id: 'instagram-user', // allow-secret (future: exchange for actual page ID)
+        access_token: encryptedToken, // allow-secret
+        scopes: ['instagram_basic', 'instagram_content_publish', 'pages_show_list'],
+        status: 'active',
+      }).onConflictDoUpdate({
+        target: [
+          schema.platformConnections.brand_id,
+          schema.platformConnections.platform,
+          schema.platformConnections.platform_account_id,
+        ],
+        set: {
+          access_token: encryptedToken, // allow-secret
+          status: 'active',
+        },
+      });
+
+      return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=success`);
+    } catch (err) {
+      log.error({ err }, 'Instagram OAuth callback failed');
+      return reply.redirect(`${process.env.DASHBOARD_URL || 'http://localhost:5173'}/platforms?status=error`);
+    }
   });
 
   // GET /platforms/callback/tiktok

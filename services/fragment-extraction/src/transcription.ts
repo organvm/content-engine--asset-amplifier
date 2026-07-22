@@ -59,10 +59,11 @@ export async function transcribeAndExtractHooks(params: {
 
     // 4. Extract text hooks (sentences)
     // Simple sentence-based extraction for MVP
-    const sentences = text
-      .split(/(?<=[.!?])\s+/)
-      .map((s: string) => s.trim())
-      .filter((s: string) => s.length > 30 && s.length < 280); // Sensible lengths for hooks
+    // Use Intl.Segmenter for robust sentence boundary detection (handles abbreviations)
+    const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
+    const sentences = Array.from(segmenter.segment(text))
+      .map(s => s.segment.trim())
+      .filter(s => s.length > 30 && s.length < 280); // Sensible lengths for hooks
 
     for (const sentence of sentences) {
       await db.insert(schema.fragments).values({

@@ -24,6 +24,13 @@ export interface JobPayloads {
     storageKey: string;
     targetFormats: string[];
   };
+  'render.video': {
+    brandId: string;
+    assetId: string;
+    fragmentId: string;
+    headline?: string;
+    watermark?: string;
+  };
 }
 
 export type JobName = keyof JobPayloads;

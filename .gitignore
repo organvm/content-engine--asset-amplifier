@@ -15,3 +15,6 @@ coverage/
 .lh/
 .specstory/
 .vscode/
+
+# Runtime artifacts
+dump.rdb

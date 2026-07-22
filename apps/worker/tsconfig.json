@@ -4,6 +4,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "baseUrl": ".",
+    "jsx": "react-jsx",
     "moduleResolution": "node16",
     "module": "node16"
   },

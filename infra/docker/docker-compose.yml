@@ -79,6 +79,75 @@ services:
     networks:
       - cronus-net
 
+  # ── App Services (bind-mount based, requires host pnpm install) ──────────
+  api:
+    image: node:26-slim
+    container_name: cronus-api
+    ports:
+      - "3000:3000"
+    working_dir: /app
+    volumes:
+      - ../..:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://cronus:cronus_dev@postgres:5432/cronus
+      REDIS_URL: redis://redis:6379
+      STORAGE_MODE: filesystem
+      STORAGE_PATH: /tmp/cronus-assets
+      API_PORT: "3000"
+      API_HOST: 0.0.0.0
+      LOG_LEVEL: debug
+    command: >
+      sh -c "npm install -g pnpm@9 && pnpm install && pnpm --filter @cronus/api run dev"
+
+  worker:
+    image: node:26-slim
+    container_name: cronus-worker
+    working_dir: /app
+    volumes:
+      - ../..:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://cronus:cronus_dev@postgres:5432/cronus
+      REDIS_URL: redis://redis:6379
+      STORAGE_MODE: filesystem
+      STORAGE_PATH: /tmp/cronus-assets
+      LOG_LEVEL: debug
+    command: >
+      sh -c "npm install -g pnpm@9 && pnpm install && pnpm --filter @cronus/worker run dev"
+
+  temporal-worker:
+    image: node:26-slim
+    container_name: cronus-temporal-worker
+    working_dir: /app
+    volumes:
+      - ../..:/app
+    depends_on:
+      temporal:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://cronus:cronus_dev@postgres:5432/cronus
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      LOG_LEVEL: debug
+    command: >
+      sh -c "npm install -g pnpm@9 && pnpm install && pnpm --filter temporal-worker run dev"
+
 networks:
   cronus-net:
     driver: bridge

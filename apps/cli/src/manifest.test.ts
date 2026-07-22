@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 /**
  * Pure generator function for testing CLI manifest structure.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function generateManifestFromProfile(profile: Record<string, any>) {
   const title = profile.title || 'Untitled Instrument';
   const slug = (profile.slug || title).toLowerCase().replace(/[^a-z0-9]+/g, '-');

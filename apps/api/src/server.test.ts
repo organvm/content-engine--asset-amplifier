@@ -1,6 +1,17 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { buildApp } from './server.js';
 import type { FastifyInstance } from 'fastify';
+
+vi.mock('@cronus/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@cronus/config')>();
+  return {
+    ...actual,
+    getConfig: vi.fn().mockReturnValue({
+      INSTAGRAM_CLIENT_ID: 'mock',
+      INSTAGRAM_CLIENT_SECRET: 'mock',
+    }),
+  };
+});
 
 describe('Fastify API Server Routes', () => {
   let app: FastifyInstance;

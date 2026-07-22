@@ -1,41 +1,68 @@
-name: ci
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  verify:
-    name: typecheck · lint · test · build
+  build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: cronus_test
+          POSTGRES_USER: cronus
+          POSTGRES_PASSWORD: cronus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-
+          cache: 'pnpm'
+          
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm typecheck
-
+        
+      - name: Type-check
+        run: pnpm run typecheck
+        
       - name: Lint
-        run: pnpm lint
-
-      - name: Test
-        run: pnpm test
-
+        run: pnpm run lint
+        
       - name: Build
-        run: pnpm build
+        run: pnpm run build
+        
+      - name: Unit tests
+        run: pnpm run test
+        
+      - name: E2E integration test
+        env:
+          DATABASE_URL: postgres://cronus:cronus_test@localhost:5432/cronus_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+        run: npx vitest run --config infra/tests/vitest.config.ts

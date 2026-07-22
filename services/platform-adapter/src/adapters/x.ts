@@ -1,6 +1,7 @@
 import { ContentUnit, Platform, PlatformConnection } from '@cronus/domain';
 import { PlatformAdapter, PostMetrics, MediaSpec } from '../interface.js';
 import { createLogger } from '@cronus/logger';
+import { checkRateLimit as checkRateLimitFn } from '../rate-limiter.js';
 
 const log = createLogger('platform-adapter:x');
 
@@ -13,8 +14,19 @@ export class XAdapter implements PlatformAdapter {
       return false;
     }
     log.info({ accountId: connection.platformAccountId }, 'Authenticating X connection');
-    // TODO: Verify bearer token against X API v2: GET /2/users/me
-    return true;
+    try {
+      const res = await fetch('https://api.twitter.com/2/users/me', {
+        headers: { 'Authorization': `Bearer ${connection.accessToken}` },
+      });
+      if (!res.ok) {
+        log.error({ status: res.status }, 'X token verification failed');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      log.error({ err }, 'X token verification error');
+      return false;
+    }
   }
 
   async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
@@ -30,7 +42,7 @@ export class XAdapter implements PlatformAdapter {
     // First, upload media via v1.1 upload endpoint if needed.
     // For this implementation, we'll post text-only to the v2 endpoint if mediaKey is not provided.
 
-    const requestBody: any = {
+    const requestBody = {
       text: unit.caption,
     };
 
@@ -46,16 +58,12 @@ export class XAdapter implements PlatformAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       log.error({ status: res.status, errorText }, 'X (Twitter) publish failed');
-      
-      const fallbackId = `x_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://x.com/user/status/${fallbackId}`,
-      };
+      throw new Error(`X (Twitter) publish failed: ${res.status} ${errorText}`);
     }
 
-    const data = await res.json() as any;
-    const postId = data.data?.id || `x_${Math.random().toString(36).substring(7)}`;
+    const data: Record<string, unknown> = await res.json();
+    const body = data.data as Record<string, unknown> | undefined;
+    const postId = (body?.id as string) || `x_${Math.random().toString(36).substring(7)}`;
 
     return {
       platformPostId: postId,
@@ -67,15 +75,27 @@ export class XAdapter implements PlatformAdapter {
     if (!connection.accessToken) {
       throw new Error('X: No access token provided');
     }
-    // TODO: Fetch from X API v2 tweet metrics
-    // GET /2/tweets/:id?tweet.fields=public_metrics
-    // Fields: impression_count, like_count, reply_count, retweet_count
-    log.info({ platformPostId }, 'Fetching X metrics (simulated)');
-    return {
-      views: 0,
-      engagement: 0,
-      raw: { source: 'simulated' },
-    };
+    try {
+      const res = await fetch(
+        `https://api.twitter.com/2/tweets/${platformPostId}?tweet.fields=public_metrics`,
+        { headers: { 'Authorization': `Bearer ${connection.accessToken}` } }
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'X metrics fetch failed, returning defaults');
+        return { views: 0, engagement: 0, raw: { source: 'fallback' } };
+      }
+      const data: Record<string, unknown> = await res.json();
+      const tweetData = data.data as Record<string, unknown> | undefined;
+      const metrics = tweetData?.public_metrics as Record<string, unknown> | undefined;
+      const views = (metrics?.impression_count as number) ?? 0;
+      const likes = (metrics?.like_count as number) ?? 0;
+      const replies = (metrics?.reply_count as number) ?? 0;
+      const retweets = (metrics?.retweet_count as number) ?? 0;
+      return { views, engagement: likes + replies + retweets, raw: data };
+    } catch (err) {
+      log.error({ err }, 'X metrics fetch error');
+      return { views: 0, engagement: 0, raw: { source: 'error' } };
+    }
   }
 
   getFormatSpec(): MediaSpec {
@@ -89,7 +109,6 @@ export class XAdapter implements PlatformAdapter {
   }
 
   async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
-    // X API v2: 300 requests per 15 minutes (user context)
-    return false;
+    return checkRateLimitFn(connection, { maxRequests: 300, windowMs: 900000 });
   }
 }

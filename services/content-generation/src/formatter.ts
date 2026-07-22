@@ -61,7 +61,8 @@ export async function formatMedia(params: {
 
       await fs.promises.writeFile(inputPath, buffer);
 
-      const vfFilter = `scale=${spec.width}:${spec.height}:force_original_aspect_ratio=decrease,pad=${spec.width}:${spec.height}:(ow-iw)/2:(oh-ih)/2`;
+      // Crop to target aspect ratio rather than padding with black bars
+      const vfFilter = `scale=${spec.width}:${spec.height}:force_original_aspect_ratio=increase,crop=${spec.width}:${spec.height}`;
 
       await new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)

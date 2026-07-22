@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { refineNaturalCenter } from './refine.js';
-import { getDb, schema, eq, sql } from '@cronus/db';
+import { getDb, schema } from '@cronus/db';
 import * as promptLib from './prompt.js';
 
 vi.mock('@cronus/db', () => ({

@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { getDb, schema, mapRows } from '@cronus/db';
-import { eq } from '@cronus/db';
+import { eq, and, gte, lte } from '@cronus/db';
 import { scheduleContent } from '@cronus/scheduler';
 import { ScheduleStrategy } from '@cronus/domain';
 
@@ -36,19 +36,24 @@ export const scheduleRoutes: FastifyPluginAsync = async (app) => {
   // GET /brands/:brandId/calendar
   app.get('/brands/:brandId/calendar', async (request) => {
     const { brandId } = request.params as { brandId: string };
-    const { start_date: _start_date, end_date: _end_date } = request.query as { start_date?: string; end_date?: string };
+    const { start_date, end_date } = request.query as { start_date?: string; end_date?: string };
     const db = getDb();
 
     // Must join through content_units to filter by brand
-    const query = db
+    const conditions = [eq(schema.contentUnits.brand_id, brandId)];
+
+    if (start_date) {
+      conditions.push(gte(schema.publishEvents.scheduled_at, new Date(start_date)));
+    }
+    if (end_date) {
+      conditions.push(lte(schema.publishEvents.scheduled_at, new Date(end_date)));
+    }
+
+    const rows = await db
       .select()
       .from(schema.publishEvents)
       .innerJoin(schema.contentUnits, eq(schema.publishEvents.content_unit_id, schema.contentUnits.id))
-      .where(eq(schema.contentUnits.brand_id, brandId));
-
-    // TODO: add date range filters if start_date/end_date provided
-
-    const rows = await query;
+      .where(and(...conditions));
     return mapRows(rows.map(r => r.publish_events));
   });
 };

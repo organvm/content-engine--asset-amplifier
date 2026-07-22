@@ -12,7 +12,7 @@ const log = createLogger('fragment-extraction:image');
  * 
  * - Generates multiple aspect-ratio variants (square, portrait, story).
  * - Uses Sharp's entropy-based strategy for smart cropping.
- * - Detects focal point (TODO: use custom saliency if needed).
+ * - Detects focal point via Sharp's entropy-weighted crop analysis.
  */
 export async function extractImageFragments(params: {
   assetId: string;

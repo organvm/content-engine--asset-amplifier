@@ -28,6 +28,8 @@ vi.mock('@cronus/config', () => ({
   getConfig: vi.fn().mockReturnValue({
     LINKEDIN_CLIENT_ID: 'linkedin-client',
     LINKEDIN_CLIENT_SECRET: 'linkedin-secret',
+    INSTAGRAM_CLIENT_ID: 'instagram-client',
+    INSTAGRAM_CLIENT_SECRET: 'instagram-secret',
   }),
   encrypt: vi.fn((val) => `encrypted_${val}`),
 }));
@@ -71,6 +73,24 @@ describe('Platforms Routes', () => {
     const response = await app.inject({
       method: 'GET',
       url: '/api/v1/platforms/callback/linkedin?code=123&state=test-brand',
+    });
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toContain('status=success');
+  });
+
+  it('GET /api/v1/brands/:brandId/platforms/connect/instagram should redirect', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/brands/test-brand/platforms/connect/instagram',
+    });
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toContain('facebook.com');
+  });
+
+  it('GET /api/v1/platforms/callback/instagram should handle callback', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/platforms/callback/instagram?code=123&state=test-brand',
     });
     expect(response.statusCode).toBe(302);
     expect(response.headers.location).toContain('status=success');

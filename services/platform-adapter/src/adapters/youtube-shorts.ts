@@ -1,6 +1,7 @@
 import { ContentUnit, Platform, PlatformConnection } from '@cronus/domain';
 import { PlatformAdapter, PostMetrics, MediaSpec } from '../interface.js';
 import { createLogger } from '@cronus/logger';
+import { checkRateLimit as checkRateLimitFn } from '../rate-limiter.js';
 
 const log = createLogger('platform-adapter:youtube-shorts');
 
@@ -13,8 +14,19 @@ export class YouTubeShortsAdapter implements PlatformAdapter {
       return false;
     }
     log.info({ accountId: connection.platformAccountId }, 'Authenticating YouTube connection');
-    // TODO: Verify OAuth2 token against YouTube Data API v3: GET /youtube/v3/channels?part=snippet&mine=true
-    return true;
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true&access_token=${connection.accessToken}`
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'YouTube token verification failed');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      log.error({ err }, 'YouTube token verification error');
+      return false;
+    }
   }
 
   async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
@@ -30,7 +42,7 @@ export class YouTubeShortsAdapter implements PlatformAdapter {
       throw new Error('YouTube: Media is required for publishing Shorts');
     }
 
-    const metadata = {
+    const _metadata = {
       snippet: {
         title: unit.caption.substring(0, 100),
         description: `${unit.caption}\n\n#shorts ${unit.hashtags?.join(' ')}`,
@@ -55,26 +67,27 @@ export class YouTubeShortsAdapter implements PlatformAdapter {
     */
 
     // We will do a simulated request for the sake of the demo, but logging the actual intent.
-    const res = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${connection.accessToken}`,
-        // 'Content-Type': 'multipart/related; boundary=...'
-      },
-      // body: form
-    }).catch(err => ({ ok: false, status: 0, text: async () => String(err) }));
-
-    if (!(res as any).ok) {
-      // log.error({ status: (res as any).status }, 'YouTube Data API publish failed');
-      const fallbackId = `yt_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://youtube.com/shorts/${fallbackId}`,
-      };
+    let res: Response;
+    try {
+      res = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=multipart&part=snippet,status', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${connection.accessToken}`,
+        },
+      });
+    } catch (fetchErr) {
+      log.error({ err: fetchErr }, 'YouTube Data API network error');
+      throw new Error(`YouTube Data API network error: ${(fetchErr as Error).message}`, { cause: fetchErr });
     }
 
-    const data = await (res as any).json();
-    const postId = data.id || `yt_${Math.random().toString(36).substring(7)}`;
+    if (!res.ok) {
+      const errorText = await res.text();
+      log.error({ status: res.status, errorText }, 'YouTube Data API publish failed');
+      throw new Error(`YouTube Data API publish failed: ${res.status} ${errorText}`);
+    }
+
+    const data: Record<string, unknown> = await res.json();
+    const postId = (data.id as string) || `yt_${Math.random().toString(36).substring(7)}`;
 
     return {
       platformPostId: postId,
@@ -86,14 +99,25 @@ export class YouTubeShortsAdapter implements PlatformAdapter {
     if (!connection.accessToken) {
       throw new Error('YouTube: No access token provided');
     }
-    // TODO: Fetch from YouTube Analytics API
-    // GET /youtube/analytics/v2/reports?ids=channel==MINE&metrics=views,likes,comments
-    log.info({ platformPostId }, 'Fetching YouTube metrics (simulated)');
-    return {
-      views: 0,
-      engagement: 0,
-      raw: { source: 'simulated' },
-    };
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${platformPostId}&access_token=${connection.accessToken}`
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'YouTube metrics fetch failed, returning defaults');
+        return { views: 0, engagement: 0, raw: { source: 'fallback' } };
+      }
+      const data: Record<string, unknown> = await res.json();
+      const items = data.items as Array<Record<string, unknown>> | undefined;
+      const stats = items?.[0]?.statistics as Record<string, unknown> | undefined;
+      const views = parseInt((stats?.viewCount as string) ?? '0', 10);
+      const likes = parseInt((stats?.likeCount as string) ?? '0', 10);
+      const comments = parseInt((stats?.commentCount as string) ?? '0', 10);
+      return { views, engagement: likes + comments, raw: data };
+    } catch (err) {
+      log.error({ err }, 'YouTube metrics fetch error');
+      return { views: 0, engagement: 0, raw: { source: 'error' } };
+    }
   }
 
   getFormatSpec(): MediaSpec {
@@ -107,7 +131,6 @@ export class YouTubeShortsAdapter implements PlatformAdapter {
   }
 
   async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
-    // YouTube API: 10,000 units per day (varies by operation)
-    return false;
+    return checkRateLimitFn(connection, { maxRequests: 10000, windowMs: 86400000 });
   }
 }

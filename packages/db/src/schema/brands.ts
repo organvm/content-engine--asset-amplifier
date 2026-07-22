@@ -11,6 +11,10 @@ export const brands = pgTable('brands', {
   tone_description: text('tone_description'),
   consistency_threshold: real('consistency_threshold').notNull().default(0.75),
   status: text('status').notNull().default('active'),
+  stripe_customer_id: text('stripe_customer_id'),
+  subscription_tier: text('subscription_tier'),
+  subscription_status: text('subscription_status'),
+  subscription_id: text('subscription_id'),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

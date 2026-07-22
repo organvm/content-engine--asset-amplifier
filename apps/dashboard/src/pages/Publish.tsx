@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBrand } from '../services/BrandContext.js';
-import { contentService, brandService, ContentUnit } from '../services/api.js';
+import { contentService, ContentUnit } from '../services/api.js';
 
 export default function PublishPage() {
   const { brandId, selectedBrand } = useBrand();

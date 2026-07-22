@@ -1,6 +1,7 @@
 import { ContentUnit, Platform, PlatformConnection } from '@cronus/domain';
 import { PlatformAdapter, PostMetrics, MediaSpec } from '../interface.js';
 import { createLogger } from '@cronus/logger';
+import { checkRateLimit as checkRateLimitFn } from '../rate-limiter.js';
 
 const log = createLogger('platform-adapter:tiktok');
 
@@ -13,8 +14,20 @@ export class TikTokAdapter implements PlatformAdapter {
       return false;
     }
     log.info({ accountId: connection.platformAccountId }, 'Authenticating TikTok connection');
-    // TODO: Verify access token against TikTok API: GET /v2/user/info/
-    return true;
+    try {
+      const res = await fetch(
+        `https://open.tiktokapis.com/v2/user/info/?fields=open_id`,
+        { headers: { 'Authorization': `Bearer ${connection.accessToken}` } }
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'TikTok token verification failed');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      log.error({ err }, 'TikTok token verification error');
+      return false;
+    }
   }
 
   async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
@@ -58,16 +71,12 @@ export class TikTokAdapter implements PlatformAdapter {
     if (!res.ok) {
       const errorText = await res.text();
       log.error({ status: res.status, errorText }, 'TikTok publish initialization failed');
-      
-      const fallbackId = `tt_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://www.tiktok.com/@user/video/${fallbackId}`,
-      };
+      throw new Error(`TikTok publish failed: ${res.status} ${errorText}`);
     }
 
-    const data = await res.json() as any;
-    const postId = data.data?.publish_id || `tt_${Math.random().toString(36).substring(7)}`;
+    const data: Record<string, unknown> = await res.json();
+    const body = data.data as Record<string, unknown> | undefined;
+    const postId = (body?.publish_id as string) || `tt_${Math.random().toString(36).substring(7)}`;
 
     return {
       platformPostId: postId,
@@ -79,14 +88,35 @@ export class TikTokAdapter implements PlatformAdapter {
     if (!connection.accessToken) {
       throw new Error('TikTok: No access token provided');
     }
-    // TODO: Fetch from TikTok Data API
-    // Fields: play_count, like_count, comment_count, share_count
-    log.info({ platformPostId }, 'Fetching TikTok metrics (simulated)');
-    return {
-      views: 0,
-      engagement: 0,
-      raw: { source: 'simulated' },
-    };
+    try {
+      const res = await fetch(
+        'https://open.tiktokapis.com/v2/video/query/',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${connection.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ filters: { video_ids: [platformPostId] } }),
+        }
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'TikTok metrics fetch failed, returning defaults');
+        return { views: 0, engagement: 0, raw: { source: 'fallback' } };
+      }
+      const data: Record<string, unknown> = await res.json();
+      const d = data.data as Record<string, unknown> | undefined;
+      const videoList = d?.video_list as Record<string, unknown> | undefined;
+      const video = videoList?.[platformPostId] as Record<string, unknown> | undefined;
+      const views = (video?.view_count as number) ?? 0;
+      const likes = (video?.like_count as number) ?? 0;
+      const comments = (video?.comment_count as number) ?? 0;
+      const shares = (video?.share_count as number) ?? 0;
+      return { views, engagement: likes + comments + shares, raw: data };
+    } catch (err) {
+      log.error({ err }, 'TikTok metrics fetch error');
+      return { views: 0, engagement: 0, raw: { source: 'error' } };
+    }
   }
 
   getFormatSpec(): MediaSpec {
@@ -100,7 +130,6 @@ export class TikTokAdapter implements PlatformAdapter {
   }
 
   async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
-    // TikTok API: 100 requests per minute per app
-    return false;
+    return checkRateLimitFn(connection, { maxRequests: 100, windowMs: 60000 });
   }
 }

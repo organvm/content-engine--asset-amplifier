@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-function-type */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractVideoFragments } from './video.js';
-import { getDb, schema } from '@cronus/db';
+import { getDb } from '@cronus/db';
 import { createStorage } from '@cronus/storage';
 import fs from 'node:fs/promises';
-import ffmpeg from 'fluent-ffmpeg';
 
 vi.mock('@cronus/db', () => ({
   getDb: vi.fn(),

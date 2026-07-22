@@ -1,6 +1,7 @@
 import { ContentUnit, Platform, PlatformConnection } from '@cronus/domain';
 import { PlatformAdapter, PostMetrics, MediaSpec } from '../interface.js';
 import { createLogger } from '@cronus/logger';
+import { checkRateLimit as checkRateLimitFn } from '../rate-limiter.js';
 
 const log = createLogger('platform-adapter:instagram');
 
@@ -8,14 +9,22 @@ export class InstagramAdapter implements PlatformAdapter {
   constructor(public platform: Platform) {}
 
   async authenticate(connection: PlatformConnection): Promise<boolean> {
-    log.info({ accountId: connection.platformAccountId }, 'Authenticating Instagram connection');
     if (!connection.accessToken) {
       log.error('No access token provided');
       return false;
     }
-    // TODO: Verify token against Meta Graph API: GET /me?access_token={token}
-    // For now, accept any non-empty token
-    return true;
+    log.info({ accountId: connection.platformAccountId }, 'Authenticating Instagram connection');
+    try {
+      const res = await fetch(`https://graph.facebook.com/v20.0/me?access_token=${connection.accessToken}`);
+      if (!res.ok) {
+        log.error({ status: res.status }, 'Instagram token verification failed');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      log.error({ err }, 'Instagram token verification error');
+      return false;
+    }
   }
 
   async publish(unit: ContentUnit, connection: PlatformConnection): Promise<{
@@ -54,16 +63,11 @@ export class InstagramAdapter implements PlatformAdapter {
     if (!containerRes.ok) {
       const errorText = await containerRes.text();
       log.error({ status: containerRes.status, errorText }, 'Instagram media container creation failed');
-      
-      const fallbackId = `ig_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://instagram.com/p/${fallbackId}`,
-      };
+      throw new Error(`Instagram media container creation failed: ${containerRes.status} ${errorText}`);
     }
 
-    const containerData = await containerRes.json() as any;
-    const creationId = containerData.id;
+    const containerData: Record<string, unknown> = await containerRes.json();
+    const creationId = containerData.id as string;
 
     // In a real implementation for video, we would need to poll /media?fields=status_code to ensure it's FINISHED.
     // Assuming synchronous readiness for images or short videos for this implementation:
@@ -82,16 +86,11 @@ export class InstagramAdapter implements PlatformAdapter {
     if (!publishRes.ok) {
       const errorText = await publishRes.text();
       log.error({ status: publishRes.status, errorText }, 'Instagram media publish failed');
-      
-      const fallbackId = `ig_sim_${Math.random().toString(36).substring(7)}`;
-      return {
-        platformPostId: fallbackId,
-        platformPostUrl: `https://instagram.com/p/${fallbackId}`,
-      };
+      throw new Error(`Instagram media publish failed: ${publishRes.status} ${errorText}`);
     }
 
-    const publishData = await publishRes.json() as any;
-    const postId = publishData.id || `ig_${Math.random().toString(36).substring(7)}`;
+    const publishData: Record<string, unknown> = await publishRes.json();
+    const postId = (publishData.id as string) || `ig_${Math.random().toString(36).substring(7)}`;
 
     return {
       platformPostId: postId,
@@ -103,14 +102,32 @@ export class InstagramAdapter implements PlatformAdapter {
     if (!connection.accessToken) {
       throw new Error('Instagram: No access token provided');
     }
-    // TODO: Fetch from Meta Insights API
-    // GET /{media-id}/insights?metric=impressions,reach,engagement&access_token={token}
-    log.info({ platformPostId }, 'Fetching Instagram metrics (simulated)');
-    return {
-      views: 100,
-      engagement: 10,
-      raw: { source: 'simulated' },
-    };
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v20.0/${platformPostId}/insights?metric=impressions,reach,engagement&access_token=${connection.accessToken}`
+      );
+      if (!res.ok) {
+        log.error({ status: res.status }, 'Instagram metrics fetch failed, returning defaults');
+        return { views: 0, engagement: 0, raw: { source: 'fallback' } };
+      }
+      const data: Record<string, unknown> = await res.json();
+      const dataArray = data.data as Array<Record<string, unknown>> | undefined;
+      let views = 0;
+      let engagement = 0;
+      if (dataArray) {
+        for (const metric of dataArray) {
+          const name = metric.name as string;
+          const values = metric.values as Array<Record<string, unknown>> | undefined;
+          const value = values?.[0]?.value as number | undefined;
+          if (name === 'impressions') views = value ?? 0;
+          if (name === 'engagement') engagement = value ?? 0;
+        }
+      }
+      return { views, engagement, raw: data };
+    } catch (err) {
+      log.error({ err }, 'Instagram metrics fetch error');
+      return { views: 0, engagement: 0, raw: { source: 'error' } };
+    }
   }
 
   getFormatSpec(): MediaSpec {
@@ -124,9 +141,6 @@ export class InstagramAdapter implements PlatformAdapter {
   }
 
   async checkRateLimit(connection: PlatformConnection): Promise<boolean> {
-    // TODO: Check Meta Graph API rate limit headers
-    // Instagram Graph API: 200 calls per hour per user token
-    // Return true if rate limited, false if OK
-    return false;
+    return checkRateLimitFn(connection, { maxRequests: 200, windowMs: 3600000 });
   }
 }

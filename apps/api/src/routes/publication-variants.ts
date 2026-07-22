@@ -66,7 +66,7 @@ export const publicationVariantRoutes: FastifyPluginAsync = async (app) => {
 
   // PATCH /brands/:brandId/projects/:projectId/variants/:variantId
   app.patch('/brands/:brandId/projects/:projectId/variants/:variantId', async (request, reply) => {
-    const { projectId, variantId } = request.params as { projectId: string; variantId: string };
+    const { projectId: _projectId, variantId } = request.params as { projectId: string; variantId: string };
     const body = request.body as Record<string, unknown>;
     const db = getDb();
 

@@ -4,14 +4,26 @@ import path from 'node:path';
 import ora from 'ora';
 
 function extractSection(content: string, heading: string): string | null {
-  // Matches "## Heading" or "### Heading" (case insensitive) until the next heading or EOF
   const regex = new RegExp(`^#{2,4}\\s+${heading}\\s*\\n([\\s\\S]*?)(?=^#{2,4}\\s|$)`, 'im');
   const match = content.match(regex);
   return match ? match[1].trim() : null;
 }
 
-function parseKerygma(content: string) {
-  const kerygma: any = {
+interface Kerygma {
+  project: string; account: string; title: string[]; canonical_url: string;
+  voice: { mode: string; density: string; promotionality: string };
+  visual_rules: { grid_role: string; palette: string; preferred_format: string };
+  caption_forms: string[];
+  audience_hypothesis: {
+    problem_first: { question: string; hypothesis: string };
+    identity_first: { question: string; hypothesis: string };
+    opportunity_first: { question: string; hypothesis: string };
+  };
+  kpi_architecture: Record<string, string[]>;
+}
+
+function parseKerygma(content: string): Kerygma {
+  const kerygma: Kerygma = {
     project: 'Extracted Profile',
     account: 'Unknown',
     title: [],
@@ -47,8 +59,13 @@ function parseKerygma(content: string) {
   return kerygma;
 }
 
-function parseArtworkProject(content: string) {
-  const project: any = {
+interface ArtworkProject {
+  brandId: string; title: string; subtitle: string; projectType: string;
+  hashtagTitle: string[]; keywords: string[]; canonicalEssay: string; artistStatement: string;
+}
+
+function parseArtworkProject(content: string): ArtworkProject {
+  const project: ArtworkProject = {
     brandId: 'default',
     title: 'Extracted Project',
     subtitle: '',
@@ -60,7 +77,7 @@ function parseArtworkProject(content: string) {
   };
 
   const titleSection = extractSection(content, 'Title');
-  if (titleSection) project.title = titleSection.split('\n')[0].replace(/[\#\*]/g, '').trim();
+  if (titleSection) project.title = titleSection.split('\n')[0].replace(/[#*]/g, '').trim();
 
   const essaySection = extractSection(content, 'Canonical Essay') || extractSection(content, 'Essay');
   if (essaySection) project.canonicalEssay = essaySection;
@@ -98,16 +115,13 @@ export const ingestCommand = new Command('ingest')
         spinner.text = `Processing ${path.basename(file)}...`;
         const content = await fs.readFile(file, 'utf8');
 
-        let jsonOutput: any;
-        if (options.type === 'kerygma') {
-          jsonOutput = parseKerygma(content);
-        } else {
-          jsonOutput = parseArtworkProject(content);
-        }
-        
+        const jsonOutput = options.type === 'kerygma'
+          ? parseKerygma(content)
+          : parseArtworkProject(content);
+
         const outDir = path.dirname(path.resolve(options.out));
         await fs.mkdir(outDir, { recursive: true });
-        
+
         let writePath = path.resolve(options.out);
         if (stats.isDirectory() || files.length > 1) {
           const parsed = path.parse(file);

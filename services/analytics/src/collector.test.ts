@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { collectMetrics } from './collector.js';
 import { getDb } from '@cronus/db';
 import { getAdapter } from '@cronus/platform-adapter';
-import { PublishStatus, Platform } from '@cronus/domain';
+import { Platform } from '@cronus/domain';
 
 // Mock dependencies
 vi.mock('@cronus/db', () => ({

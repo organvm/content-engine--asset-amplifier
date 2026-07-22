@@ -46,7 +46,9 @@ program.command('upload')
         console.log(`✔ Local asset upload processed (${filename})`);
       }
     } catch (err: unknown) {
-      console.log(`✔ Asset upload processed (${path.basename(filePath)})`);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`✖ Upload failed: ${message}`);
+      process.exit(1);
     }
   });
 
@@ -61,8 +63,10 @@ program.command('status')
       } else {
         console.log(JSON.stringify({ jobId, status: 'completed', progress: 100, updatedAt: new Date().toISOString() }, null, 2));
       }
-    } catch (err) {
-      console.log(JSON.stringify({ jobId, status: 'completed', progress: 100, updatedAt: new Date().toISOString() }, null, 2));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`✖ Status check failed: ${message}`);
+      process.exit(1);
     }
   });
 

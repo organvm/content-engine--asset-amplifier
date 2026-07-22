@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { deriveNaturalCenter } from './derive.js';
-import { getDb, schema, inArray, and, eq, sql } from '@cronus/db';
+import { getDb, schema } from '@cronus/db';
 import { resolveProviders } from '@cronus/config';
 
 vi.mock('@cronus/db', () => ({

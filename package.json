@@ -23,6 +23,7 @@
     "db:seed": "tsx infra/scripts/seed.ts",
     "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "healthcheck": "bash infra/scripts/healthcheck.sh",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md,yaml}\""
   },

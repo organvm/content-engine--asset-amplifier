@@ -6,6 +6,7 @@ import { executePublish } from './processors/publish.js';
 import { processContentGenerate } from './processors/content-generate.js';
 import { processNcDerive } from './processors/nc-derive.js';
 import { processAnalyticsCollect } from './processors/analytics.js';
+import { processRenderVideo } from './processors/render-video.js';
 
 const logger = createLogger('worker-main');
 
@@ -39,7 +40,12 @@ async function main() {
     await processAnalyticsCollect(job.data);
   });
 
-  const workers = [assetWorker, contentGenWorker, publishWorker, ncDeriveWorker, analyticsWorker];
+  const renderVideoWorker = createWorker('render.video', async (job) => {
+    logger.info({ data: job.data }, `Starting video render for job ${job.id}`);
+    await processRenderVideo(job.data);
+  });
+
+  const workers = [assetWorker, contentGenWorker, publishWorker, ncDeriveWorker, analyticsWorker, renderVideoWorker];
 
   workers.forEach((worker) => {
     worker.on('completed', (job) => {

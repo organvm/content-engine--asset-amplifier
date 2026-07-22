@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processAssetFragments } from './index.js';
-import { getDb, schema, eq, and } from '@cronus/db';
+import { getDb, schema } from '@cronus/db';
 import { extractVideoFragments } from './video.js';
 import { extractImageFragments } from './image.js';
 import { transcribeAndExtractHooks } from './transcription.js';
@@ -82,7 +83,7 @@ describe('processAssetFragments', () => {
     const mockUpdate = vi.fn().mockReturnValue({ set: vi.fn().mockReturnValue({ where: mockUpdateSetWhere }) });
     const mockDb = {
       select: vi.fn().mockImplementation(() => ({
-        from: vi.fn().mockImplementation((table: any) => {
+        from: vi.fn().mockImplementation((_table: any) => {
            return { where: vi.fn().mockResolvedValue([{ id: 'a', media_type: 'image', brand_id: 'b', storage_key: 's' }]) };
         })
       })),

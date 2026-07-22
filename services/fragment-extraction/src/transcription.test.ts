@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { transcribeAndExtractHooks } from './transcription.js';
-import { getDb, schema, eq } from '@cronus/db';
+import { getDb } from '@cronus/db';
 import { createStorage } from '@cronus/storage';
 import { resolveProviders } from '@cronus/config';
 import fsp from 'node:fs/promises';
-import fs from 'node:fs';
 
 vi.mock('@cronus/db', () => ({
   getDb: vi.fn(),

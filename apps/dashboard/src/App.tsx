@@ -30,10 +30,16 @@ const navItems = [
 ];
 
 const allNavItems = [
-  ...navItems.slice(0, 4),
+  { path: '/', label: 'Dashboard', icon: 'home' },
+  { path: '/assets', label: 'Assets', icon: 'assets' },
+  { path: '/roi', label: 'Asset ROI', icon: 'assets' },
+  { path: '/projects', label: 'Projects', icon: 'projects' },
+  { path: '/review', label: 'Review', icon: 'review' },
+  { path: '/publish', label: 'Publish', icon: 'review' },
+  { path: '/calendar', label: 'Calendar', icon: 'calendar' },
   { path: '/identity', label: 'Brand Identity', icon: 'identity' },
   { path: '/agencies', label: 'Agencies', icon: 'agencies' },
-  navItems[4],
+  { path: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
 /** SVG icons sized for 24x24 viewBox, touch-safe containers */

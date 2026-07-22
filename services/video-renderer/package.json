@@ -1,0 +1,27 @@
+{
+  "name": "@cronus/video-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cronus/logger": "workspace:*",
+    "@cronus/storage": "workspace:*",
+    "@remotion/bundler": "^4.0.242",
+    "@remotion/renderer": "^4.0.242",
+    "remotion": "^4.0.242",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/node": "^26.1.1"
+  }
+}

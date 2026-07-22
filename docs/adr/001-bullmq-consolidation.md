@@ -1,9 +1,10 @@
 # ADR-001: Consolidate on BullMQ, retire Temporal
 
-**Status:** Accepted  
+**DEPRECATED by ADR-002 — see below**  
+**Original Status:** Accepted → **Superseded**  
 **Date:** 2026-07-19  
 **Deciders:** Anthony Padavano  
-**Closes:** #11  
+**Closes:** #11, #11-reopened  
 
 ## Context
 

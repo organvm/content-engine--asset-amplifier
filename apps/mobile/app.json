@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Cronus Mobile",
+    "slug": "cronus-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0f0f0f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.cronus.mobile"
+    },
+    "android": {
+      "package": "org.cronus.mobile"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

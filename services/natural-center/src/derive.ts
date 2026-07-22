@@ -34,8 +34,7 @@ export async function deriveNaturalCenter(params: {
 
   try {
     // 1. Collect inputs (keyframes and transcripts)
-    // TODO: feed keyframes into vision analysis once the stub below is replaced
-    const _keyframes = await db
+    const keyframes = await db
       .select()
       .from(schema.fragments)
       .where(
@@ -53,8 +52,21 @@ export async function deriveNaturalCenter(params: {
 
     const transcriptions = assets.map(a => a.transcription).filter(Boolean).join('\n\n');
 
-    // 2. Visual Analysis (Claude Vision Stub for MVP)
-    const visualSignature = "Modern, minimalist, high-contrast, premium product focus.";
+    // 2. Visual Analysis — use extraction metadata or LLM to describe visual style
+    let visualSignature = "Modern, minimalist, high-contrast, premium product focus.";
+    const extractionMeta = keyframes
+      .map(kf => kf.extraction_metadata as Record<string, unknown> | null)
+      .filter(Boolean);
+    if (extractionMeta.length > 0) {
+      const collected = extractionMeta.map(m => JSON.stringify(m)).join('; ');
+      try {
+        const visionPrompt = `Based on these visual asset analysis metadata, describe the brand's visual style and aesthetic signature in 1-2 sentences. Focus on: color palette, lighting, composition, mood, and overall design language.\n\nExtraction metadata: ${collected}`;
+        const visionResult = await llm.generate(visionPrompt, { maxTokens: 100 });
+        if (visionResult) visualSignature = visionResult.trim();
+      } catch (visionErr) {
+        log.warn({ err: visionErr }, 'Vision analysis failed, using default visual signature');
+      }
+    }
 
     // 3. Tonal Synthesis
     const synthesisPrompt = `Analyze this brand and return ONLY valid JSON (no markdown, no explanation):
