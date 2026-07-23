@@ -46,17 +46,10 @@ Premium brands invest heavily in hero films and product renders, often using eac
 ## Quick Start
 
 ```bash
-# Clone and install
-pnpm install
-
-# Start local infra (Redis/Postgres)
-pnpm docker:up
-
-# Run migrations
-pnpm db:migrate
-
-# Start development environment
-pnpm dev
+pnpm install         # Clone and install dependencies
+pnpm docker:up       # Start local infra (Redis/Postgres)
+pnpm db:migrate      # Run migrations
+pnpm dev             # Start development environment
 ```
 
 ## Contact
