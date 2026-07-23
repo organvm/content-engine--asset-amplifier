@@ -1,8 +1,9 @@
 # Cronus Metabolus (The Content Yield Engine)
 
-**Premium asset metabolism for high-yield content distribution.**
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Part of organvm ecosystem](https://img.shields.io/badge/organvm-ecosystem-brightgreen.svg)](https://github.com/organvm)
 
-Transforms one premium visual asset (hero film, 3D render, product shoot) into 30+ days of platform-optimized social content. Built for brands that invest heavily in original production but struggle to maintain high-frequency social presence.
+Transform one premium visual asset into 30+ days of platform-optimized social content—multiply your production ROI with AI-driven clip generation, captions, and multi-channel distribution.
 
 ---
 
@@ -14,7 +15,7 @@ Transforms one premium visual asset (hero film, 3D render, product shoot) into 3
 
 ## The Problem
 
-Premium brands pay $15-50K for hero films and product renders. These assets get used once. Meanwhile, marketing teams spend 20+ hrs/week manually creating social content. The yield on original investment is too low.
+Premium brands invest heavily in hero films and product renders, often using each asset once. Meanwhile, marketing teams spend 20+ hrs/week manually creating social content. The yield on original investment is too low.
 
 ## The Solution: Metabolism
 
@@ -57,6 +58,10 @@ pnpm db:migrate
 # Start development environment
 pnpm dev
 ```
+
+## Contact
+
+Questions or collaboration? Reach out via [github.com/4444J99](https://github.com/4444J99) or through the [organvm ecosystem](https://github.com/organvm).
 
 ## License
 
